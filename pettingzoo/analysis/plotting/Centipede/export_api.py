@@ -3,9 +3,20 @@ import wandb
 import tqdm
 api = wandb.Api()
 
+sippo_cols = ["SIPPO_2024-07-05_225742", "SIPPO_2024-07-05_225708", "SIPPO_2024-07-05_225444", "SIPPO_2024-07-05_225439", "SIPPO_2024-07-05_225412"]
+ippo_cols = ["IPPO_2024-07-05_224517", "IPPO_2024-07-05_224514", "IPPO_2024-07-05_224318"]
+
+explore_policy_softmax_SIQL = ["SIQL_2024-07-05_232934", "SIQL_2024-07-05_232850", "SIQL_2024-07-05_232837"]
+explore_policy_e_greedy_SIQL = ["SIQL_2024-07-05_231826", "SIQL_2024-07-05_231821", "SIQL_2024-07-05_231749"]
+explore_policy_softmax_IQL = ["IQL_2024-07-05_232241", "IQL_2024-07-05_232219", "IQL_2024-07-05_232142"]
+explore_policy_e_greedy_IQL = ["IQL_2024-07-05_231433", "IQL_2024-07-05_231427", "IQL_2024-07-05_231424"]
+
+all_runs = ippo_cols + sippo_cols + explore_policy_softmax_SIQL + explore_policy_e_greedy_SIQL + explore_policy_softmax_IQL + explore_policy_e_greedy_IQL
+
 # Project is specified by <entity/project-name>
-project = "satchat/nt_markov_stag_hunt"
-keys = ["plant_training", "stag_training", "stag_pen_training", "total_reward_mean", "eval_mean_safety", "eval_total_reward_mean"]
+project = "satchat/nt_centipede"
+
+keys = ["total_reward_mean", "eval_total_reward_mean", "eval_mean_safety"]
 
 redownload = True
 
@@ -37,6 +48,8 @@ runs_df.to_csv("project.csv")
 dfs = {key: list() for key in keys}
 for run in tqdm.tqdm(runs, desc="Downloading runs"):
     name = run.name
+    if name not in all_runs:
+        continue
     for key in keys:
         col_name = f"{name} - {key}"
         

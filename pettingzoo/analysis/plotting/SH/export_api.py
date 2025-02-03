@@ -3,9 +3,15 @@ import wandb
 import tqdm
 api = wandb.Api()
 
+ippo_runs = ["IPPO_2024-07-01_164539", "IPPO_2024-07-01_164532", "IPPO_2024-07-01_164520", "IPPO_2024-07-01_164514", "IPPO_2024-07-01_164509"]
+sippo_runs_v1 = ["SIPPO_2024-07-01_200634", "SIPPO_2024-07-01_200623", "SIPPO_2024-07-01_200617", "SIPPO_2024-07-01_200610", "SIPPO_2024-07-01_195959"]
+sippo_runs_v0 = ["SIPPO_2024-07-01_164115", "SIPPO_2024-07-01_164110", "SIPPO_2024-07-01_163655", "SIPPO_2024-07-01_163649", "SIPPO_2024-07-01_163643"]
+
+all_runs = ippo_runs + sippo_runs_v1 + sippo_runs_v0
+
 # Project is specified by <entity/project-name>
-project = "satchat/nt_markov_stag_hunt"
-keys = ["plant_training", "stag_training", "stag_pen_training", "total_reward_mean", "eval_mean_safety", "eval_total_reward_mean"]
+project = "satchat/nt_simple_stag_v0"
+keys = ["mean_reward", "eval_mean_reward", "eval_mean_safety"]
 
 redownload = True
 
@@ -37,6 +43,8 @@ runs_df.to_csv("project.csv")
 dfs = {key: list() for key in keys}
 for run in tqdm.tqdm(runs, desc="Downloading runs"):
     name = run.name
+    if name not in all_runs:
+        continue
     for key in keys:
         col_name = f"{name} - {key}"
         

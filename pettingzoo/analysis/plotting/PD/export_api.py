@@ -4,8 +4,8 @@ import tqdm
 api = wandb.Api()
 
 # Project is specified by <entity/project-name>
-project = "satchat/nt_markov_stag_hunt"
-keys = ["plant_training", "stag_training", "stag_pen_training", "total_reward_mean", "eval_mean_safety", "eval_total_reward_mean"]
+project = "satchat/nt_simple_pd_v0"
+keys = ["mean_reward", "eval_mean_reward", "eval_mean_safety"]
 
 redownload = True
 
@@ -37,6 +37,8 @@ runs_df.to_csv("project.csv")
 dfs = {key: list() for key in keys}
 for run in tqdm.tqdm(runs, desc="Downloading runs"):
     name = run.name
+    if "IPPO" not in name: # NOTE: only do IPPO and SIPPO runs for now
+        continue
     for key in keys:
         col_name = f"{name} - {key}"
         

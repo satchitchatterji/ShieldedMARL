@@ -31,14 +31,14 @@ groups = get_non_empty_groups()
 group_0_keys = [name(1.0, "IPPO", 0), name(0.5, "SIPPO", 7), name(0.5, "SMAPPO", 7), name(0.5, "SACSPPO", 7)]
 group_1_keys = [name(1.0, "IPPO", 0), name(1.0, "SIPPO", 0), name(1.0, "SIPPO", 7)]#, name(0.5, "SACSPPO", 7)]
 
-group_keys = [group_0_keys, group_1_keys]
-group_labels = ["partial_shield", "full_shield"]
+group_keys = [group_1_keys, group_0_keys]
+group_labels = ["full_shield", "partial_shield"]
 group_pick = 1
 
 labels_part = ["IPPO", "SIPPO", "SCSPPO", "SPSPPO"]
 labels_full = ["IPPO", r"SIPPO ($\mathcal{T}_{weak}$)", r"SIPPO ($\mathcal{T}_{strong}$)"]
 
-labels_all = [labels_part, labels_full]
+labels_all = [labels_full, labels_part]
 
 def sign(x): return (abs(x)/x)
 def boundary(x): return x + sign(x)*0.01*x # add 1% to the boundary
@@ -51,6 +51,7 @@ min_vals = {'plant_training': 0, 'stag_training': 0, 'stag_pen_training': 0}
 max_vals = {'plant_training': None, 'stag_training': None, 'stag_pen_training': None}
 
 for topic in topics:
+    print()
     print("Topic:", topic)
     for group_pick in range(len(group_keys)):
         plt.clf()
@@ -96,18 +97,24 @@ for topic in topics:
         window = int(len(dfs[0])*percent_rolling)
         fig, ax = plt.subplots()
 
+        # print("Topic:", topic)
         for i, df in enumerate(dfs):
             x = df.rolling(window).mean().index if "eval" not in topic else df.rolling(window).mean().index*10
             if topic == "eval_mean_safety" and i == 0:
                 continue
             ax.plot(x, df["mean"].rolling(window).mean(), label=labels[i], color=colors[i])
             ax.fill_between(x, (df["mean"] - df["std"]).rolling(window).mean(), (df["mean"] + df["std"]).rolling(window).mean(), alpha=0.2, color=colors[i])
+            # print mean and std of last window
+            if labels[i].startswith("IPPO") and "partial" in group_labels[group_pick]:
+                continue
+            # print(f"{group_labels[group_pick]}: {labels[i]}: {df['mean'].rolling(window).mean().iloc[-1]:.3f} ± {df['std'].rolling(window).mean().iloc[-1]:.3f}")
+            print(f"{df['mean'].rolling(window).mean().iloc[-1]:.3f}±{df['std'].rolling(window).mean().iloc[-1]:.3f}")
 
         ax.set_xlabel("Episode")
         ax.grid()
         # ax.set_ylim(boundary(min_vals[topic]), boundary(max_vals[topic]))
         # ax.set_ylim(min_vals[topic], max_vals[topic])
-        print("Y-Limits:", ax.get_ylim())
+        # print("Y-Limits:", ax.get_ylim())
         plt.tight_layout()
         
 
@@ -141,3 +148,29 @@ for topic in topics:
             ax.set_ylabel("Reward")
             ax.set_title("Mean Reward per Episode (Evaluation)")
             plt.savefig(f"eval{save_ext}", dpi=300, bbox_inches="tight")
+
+"""
+\begin{table*}[]
+\centering
+\begin{tabular}{c|cccccc}
+\hline
+\multicolumn{1}{c|}{\textbf{Algorithm}} & \multicolumn{1}{c}{$\sum$\textbf{plants}} & \multicolumn{1}{c}{$\sum$\textbf{stags}} & \multicolumn{1}{c}{$\sum$\textbf{penalties}} & \multicolumn{1}{c}{\textbf{$\sum r_{\text{train}}$)}} & \multicolumn{1}{c}{\textbf{$\sum r_{\text{eval}}$}} & \multicolumn{1}{c}{\textbf{mean safety}} \\ \hline
+IPPO                                                  & 18.740±4.984                                  & 0.093±0.113                               & 5.500±2.036                                  & 13.707±4.969                                     & 16.067±5.803                                 & -                                      \\
+SIPPO ($\mathcal{T}_{weak}$)                          & 18.733±4.257                                  & 12.800±7.405                              & 14.253±3.566                                 & 68.480±35.118                                    & 79.800±38.332                                & 0.955±0.014                            \\
+SIPPO ($\mathcal{T}_{weak}$)                          & 11.333±4.076                                  & 77.320±8.815                              & 11.073±3.249                                 & 386.860±46.507                                   & 393.067±65.274                               & 0.954±0.010                            \\ \hline
+\end{tabular}
+\end{table*}
+
+\begin{table*}[]
+\centering
+\begin{tabular}{c|cccccc}
+\hline
+\multicolumn{1}{c|}{\textbf{Algorithm}} & \multicolumn{1}{c}{$\sum$\textbf{plants}} & \multicolumn{1}{c}{$\sum$\textbf{stags}} & \multicolumn{1}{c}{$\sum$\textbf{penalties}} & \multicolumn{1}{c}{\textbf{$\sum r_{\text{train}}$)}} & \multicolumn{1}{c}{\textbf{$\sum r_{\text{eval}}$}} & \multicolumn{1}{c}{\textbf{mean safety}} \\ \hline
+IPPO                                    & 18.740±4.984                                  & 0.093±0.113                               & 5.500±2.036                                  & 13.707±4.969                                     & 16.067±5.803                                 & -                                                    \\
+SIPPO                                   & 10.540±3.727                                  & 3.093±2.067                               & 8.953±3.865                                  & 17.053±10.989                                    & 10.867±10.108                                & 0.580±0.051                                          \\
+SCSPPO                                  & 10.773±3.864                                  & 3.160±2.185                               & 8.760±3.319                                  & 17.813±11.485                                    & 13.333±6.030                                 & 0.613±0.035                                          \\
+SPSPPO                                  & 8.153±3.311                                   & 30.760±12.496                             & 18.300±4.184                                 & 143.653±64.459                                   & 145.667±73.443                               & 0.722±0.076                                          \\ \hline
+\end{tabular}
+\end{table*}
+
+"""
