@@ -164,7 +164,7 @@ try:
             eval_safeties.append(eval_safety_hists)
             if "eval_funcs" in dir(env):
                 for eval_func in env.eval_funcs:
-                    eval_func(env, algo, ep)
+                    eval_func(env=env, algo=algo, ep=ep, experiment_name=f"{algo_name}_{cur_time}")
 
             algo.save(f"models/{env_name}/{algo_name}_{cur_time}/ep{ep}")
 

@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 import datetime
 import seaborn as sns
-
+import os
 
 # controls
 LEFT = 0
@@ -374,7 +374,7 @@ class parallel_env(ParallelEnv):
     def env_logging_info(self, suffix):
         return {k+suffix:v for k,v in self.results.items()}
     
-    def make_animated_mov(self, *args, **kwargs):
+    def make_animated_mov(self, experiment_name="", *args, **kwargs):
         # use seaborn and funcaanimation to make an animated plot of the game
         # annotate with self.symbols
         fig, ax = plt.subplots()
@@ -392,7 +392,10 @@ class parallel_env(ParallelEnv):
             ax.set_aspect('equal')
         ani = animation.FuncAnimation(fig, animate, frames=len(self.grid_history), repeat=False)
         now = datetime.datetime.now()
-        ani.save(f"{self.animation_folder}/game_{now.strftime('%Y%m%d_%H%M%S')}.mp4")
+        if not os.path.exists(os.path.join(self.animation_folder, experiment_name)):
+            os.makedirs(os.path.join(self.animation_folder, experiment_name))
+
+        ani.save(f"{self.animation_folder}/{experiment_name}/game_{now.strftime('%Y%m%d_%H%M%S')}.mp4")
         plt.close()
 
 
