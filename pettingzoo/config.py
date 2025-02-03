@@ -61,8 +61,8 @@ parser.add_argument("--n_eval",
 
 parser.add_argument("--seed",
                     type=int,
-                    default=0,
-                    help="Seed for reproducibility."
+                    default=-1,
+                    help="Seed for reproducibility (-1 for auto)."
                     )
 
 parser.add_argument("--shield_alpha",
@@ -92,7 +92,7 @@ parser.add_argument("--shield_eval_version",
 parser.add_argument("--shielded_ratio",
                     type=float,
                     default=1.0,
-                    help="Ratio of shielded agents to unshielded (minimum)."
+                    help="Ratio of shielded agents to total (minimum)."
                     )
 
 parser.add_argument("--shield_diff",

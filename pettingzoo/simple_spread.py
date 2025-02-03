@@ -15,8 +15,11 @@ from algos import *
 from env_selection import ALL_ENVS, ALL_ENVS_ARGS
 from config import config
 
+from util import get_new_seed
+
 from run_episode import run_episode, eval_episode
 
+config.seed = get_new_seed(config)
 np.random.seed(config.seed)
 torch.manual_seed(config.seed)
 
@@ -132,7 +135,7 @@ with open(f"histories/configs/{env_name}/{algo_name}/{cur_time}.json", "w") as f
     f.write(s)
 
 with open("histories/configs/run_history.csv", "a") as f:
-    f.write(f"{cur_time}, {env_name}, {algo_name}_{cur_time}, \n")
+    f.write(f"{cur_time}, {env_name}, {algo_name}_{cur_time}, {config.seed}\n")
 
 ############################################ TRAINING ############################################
 
