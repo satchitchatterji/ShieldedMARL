@@ -11,6 +11,7 @@ histories
 plots
 
 *.csv
+*.mp4
 
 .vscode
 
