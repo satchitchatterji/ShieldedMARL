@@ -29,8 +29,9 @@ class SIPPO(BaseMARLAlgo):
             return
         
         n_unshielded = np.round((1-self.shielded_ratio) * len(self.env.agents))
-        print(f"\nINFO: Creating {n_unshielded} unshielded agents out of {len(self.env.agents)} total agents.")
-        print(f"\t> Shielded ratio (requested): {n_unshielded/len(self.env.agents)} ({1-self.shielded_ratio})\n")
+        n_shielded = len(self.env.agents) - n_unshielded
+        print(f"[SIPPO INFO]: Creating {n_shielded} shielded ({n_unshielded} unshielded) agents out of {len(self.env.agents)} total agents.")
+        print(f"              Shielded ratio (requested): {self.shielded_ratio} | Shielded ratio (actual): {n_shielded/len(self.env.agents)}")
 
         unshielded_agents = np.random.choice(self.env.agents, int(n_unshielded), replace=False)
         for agent in unshielded_agents:
