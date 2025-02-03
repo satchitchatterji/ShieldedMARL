@@ -111,6 +111,8 @@ class parallel_env(ParallelEnv):
         self.grid_history = []
         self.animate = False
         self.animation_folder = "/Users/satch/Documents/Personal/ThesisPlayground/grid_envs/animations"
+
+        self.eval_funcs = [self.make_animated_mov]
         
 
     # Observation space should be defined here.
@@ -372,7 +374,7 @@ class parallel_env(ParallelEnv):
     def env_logging_info(self, suffix):
         return {k+suffix:v for k,v in self.results.items()}
     
-    def make_animated_mov(self):
+    def make_animated_mov(self, *args, **kwargs):
         # use seaborn and funcaanimation to make an animated plot of the game
         # annotate with self.symbols
         fig, ax = plt.subplots()
