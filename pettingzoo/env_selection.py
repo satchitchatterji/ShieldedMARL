@@ -31,9 +31,11 @@ ALL_ENVS = {
     "GridNav-v0": pz_wrapper_parallel_env,
 }
 
+# grid_size=(5,5),stag_move_prob=0.1,rewards=(2, 10, -2),n_agents=2,n_plants=2,n_stags=1
+
 ALL_ENVS_ARGS = {
     "simple_spread_v3": {"N": 3, "local_ratio": 0.5, "continuous_actions": False},
-    "markov_stag_hunt": {},
+    "markov_stag_hunt": {"n_agents": 3, "grid_size": (5, 5), "stag_move_prob": 0.0, "rewards": (2, 10, -2), "n_plants": 2, "n_stags": 1},
     "simple_stag_v0": {"game": "stag", "num_actions": 2},
     "simple_pd_v0": {"game": "pd", "num_actions": 2},
     "simple_chicken_v0": {"game": "chicken", "num_actions": 2},

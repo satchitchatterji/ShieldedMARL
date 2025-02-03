@@ -6,6 +6,9 @@ import parallel_stag_hunt as psh
 
 from sensor_util import OnlineStats, normalized_pgg_distance
 
+import warnings
+warnings.filterwarnings("ignore")
+
 warned = False
 USE_CUDA = False
 
@@ -258,9 +261,10 @@ class MarkovStagHuntSensorWrapper(Wrapper):
 
         self.num_sensors = 6 # based on stag relative position
         self.translation_func = self.stag_surrounded
+        self.env = env
 
     def one_hot_to_obs(self, one_hot_obs):
-        GRID_SIZE = psh.GRID_SIZE
+        GRID_SIZE = self.env.grid_size
         one_hot_obs = torch.tensor(one_hot_obs, dtype=torch.float32, device=self.device)
         one_hot_obs = one_hot_obs.reshape((GRID_SIZE[0], GRID_SIZE[1], psh.N_OBS_TYPES))
         obs = torch.zeros((GRID_SIZE[0], GRID_SIZE[1]), dtype=torch.int32, device=self.device)

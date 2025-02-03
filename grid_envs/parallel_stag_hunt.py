@@ -7,6 +7,11 @@ from pettingzoo import ParallelEnv
 from pettingzoo.utils import parallel_to_aec, wrappers
 
 import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+import datetime
+import seaborn as sns
+
 
 # controls
 LEFT = 0
@@ -16,22 +21,12 @@ DOWN = 3
 STAY = 4
 MOVES = [LEFT, RIGHT, UP, DOWN, STAY]
 
-# board params
-STAG_MOVE_PROB = 0
-NUM_ITERS = 10
-GRID_SIZE = (5, 5)
-
 # internal grid values
 NOTHING = 0
 AGENT = 1
 BOTH = 2
 PLANT = 3
 STAG = 4
-
-# rewards
-PLANT_REWARD = 2
-STAG_REWARD = 10
-STAG_PENALTY = 2
 
 # observation types for agents
 N_OBS_TYPES = 6
@@ -75,7 +70,17 @@ def raw_env(render_mode=None):
 class parallel_env(ParallelEnv):
     metadata = {"render_modes": ["human"], "name": "markov_stag_hunt"}
 
-    def __init__(self, render_mode=None, max_cycles=10, flatten_observation=True, one_hot_observations=True):
+    def __init__(self, 
+                 render_mode=None, 
+                 max_cycles=10,
+                 flatten_observation=True, 
+                 one_hot_observations=True, 
+                 grid_size=(5,5),
+                 stag_move_prob=0.1,
+                 rewards=(2, 10, -2),
+                 n_agents=2,
+                 n_plants=2,
+                 n_stags=1):
         """
         The init method takes in environment arguments and should define the following attributes:
         - possible_agents
@@ -87,17 +92,26 @@ class parallel_env(ParallelEnv):
 
         These attributes should not be changed after initialization.
         """
-        self.possible_agents = ["player_" + str(r) for r in range(2)]
-
+        self.possible_agents = ["player_" + str(r) for r in range(n_agents)]
+        self.n_agents = n_agents
+        self.n_plants = n_plants
+        self.n_stags = n_stags
         # optional: a mapping between agent name and ID
         self.agent_name_mapping = dict(
             zip(self.possible_agents, list(range(len(self.possible_agents))))
         )
+        self.grid_size = grid_size
+        self.plant_reward, self.stag_reward, self.stag_penalty = rewards
         self.render_mode = render_mode
+        self.stag_move_prob = stag_move_prob
         self.max_cycles = max_cycles
         self.flatten_observation = flatten_observation
         self.one_hot_observations = one_hot_observations
         self.results = {"stag":0, "plant":0, "stag_pen":0}
+        self.grid_history = []
+        self.animate = False
+        self.animation_folder = "/Users/satch/Documents/Personal/ThesisPlayground/grid_envs/animations"
+        
 
     # Observation space should be defined here.
     # lru_cache allows observation and action spaces to be memoized, reducing clock cycles required to get each agent's space.
@@ -106,12 +120,12 @@ class parallel_env(ParallelEnv):
     def observation_space(self, agent):
         # gymnasium spaces are defined and documented here: https://gymnasium.farama.org/api/spaces/
         if self.one_hot_observations and self.flatten_observation:
-            return Box(low=0, high=1, shape=(GRID_SIZE[0]*GRID_SIZE[1]*N_OBS_TYPES,1), dtype=int)
+            return Box(low=0, high=1, shape=(self.grid_size[0]*self.grid_size[1]*N_OBS_TYPES,1), dtype=int)
         elif self.one_hot_observations:    
-            return Box(low=0, high=1, shape=(GRID_SIZE[0]*GRID_SIZE[1], N_OBS_TYPES), dtype=int)
+            return Box(low=0, high=1, shape=(self.grid_size[0]*self.grid_size[1], N_OBS_TYPES), dtype=int)
         elif self.flatten_observation:
-            return Box(low=0, high=5, shape=(GRID_SIZE[0]*GRID_SIZE[1],1), dtype=int)
-        return Box(low=0, high=5, shape=GRID_SIZE, dtype=int)
+            return Box(low=0, high=N_OBS_TYPES-1, shape=(self.grid_size[0]*self.grid_size[1],1), dtype=int)
+        return Box(low=0, high=N_OBS_TYPES-1, shape=self.grid_size, dtype=int)
         # TODO: Currently designed for 2 agents. Need to update for more agents
         # TODO: to categorical?
         # 0: nothing, 1: self, 2: other, 3: multiple including self, 4: plant, 5: stag
@@ -123,7 +137,7 @@ class parallel_env(ParallelEnv):
         return Discrete(len(MOVES))
         
     def show_game(self):
-        rows, cols = GRID_SIZE
+        rows, cols = self.grid_size
         string = ""
         string += "|"+"-"*int(cols*4) + "\n|"
 
@@ -132,6 +146,7 @@ class parallel_env(ParallelEnv):
                 string += self.symbols[item] + " | "
             string += "\n|"
         string += "-"*int(cols*4)
+        print(self.agent_positions)
 
         return string
 
@@ -146,7 +161,7 @@ class parallel_env(ParallelEnv):
             )
             return
 
-        if len(self.agents) == 2:
+        if len(self.agents) == self.n_agents:
             string = self.show_game()
         else:
             string = "Game over"
@@ -162,23 +177,23 @@ class parallel_env(ParallelEnv):
 
     def generate_plants_and_stag(self):
         # starting with 2 plants
-        while np.sum(self.grid == PLANT) < 2:
-            x,y = np.random.randint(0, GRID_SIZE[0]), np.random.randint(0, GRID_SIZE[1])
+        while np.sum(self.grid == PLANT) < self.n_plants:
+            x,y = np.random.randint(0, self.grid_size[0]), np.random.randint(0, self.grid_size[1])
             if self.grid[x][y] == 0:
                 self.grid[x][y] = PLANT
                 self.plant_positions.append((x,y))
         
         # starting with 1 stag
-        while np.sum(self.grid == STAG) < 1:
-            x,y = np.random.randint(0, GRID_SIZE[0]), np.random.randint(0, GRID_SIZE[1])
+        while np.sum(self.grid == STAG) < self.n_stags:
+            x,y = np.random.randint(0, self.grid_size[0]), np.random.randint(0, self.grid_size[1])
             if self.grid[x][y] == 0:
                 self.grid[x][y] = STAG
 
     def generate_starting_grid(self):
-        self.grid = np.zeros(GRID_SIZE, dtype=np.int32)
+        self.grid = np.zeros(self.grid_size, dtype=np.int32)
         self.agent_positions = {}
         for a in self.agents:
-            x,y = np.random.randint(0, GRID_SIZE[0]), np.random.randint(0, GRID_SIZE[1])
+            x,y = np.random.randint(0, self.grid_size[0]), np.random.randint(0, self.grid_size[1])
             self.grid[x][y] = AGENT if self.grid[x][y] == NOTHING else BOTH
             self.agent_positions[a] = (x,y)
 
@@ -199,7 +214,7 @@ class parallel_env(ParallelEnv):
                 closest_agent = a
         
         # stag moves with 75% probability towards closest agent
-        if np.random.rand() < STAG_MOVE_PROB and closest_agent is not None:
+        if np.random.rand() < self.stag_move_prob and closest_agent is not None:
             x,y = self.agent_positions[closest_agent]
             if stag_x < x:
                 return DOWN
@@ -219,11 +234,11 @@ class parallel_env(ParallelEnv):
         if move == LEFT:
             stag_y = max(0, stag_y-1)
         elif move == RIGHT:
-            stag_y = min(GRID_SIZE[1]-1, stag_y+1)
+            stag_y = min(self.grid_size[1]-1, stag_y+1)
         elif move == UP:
             stag_x = max(0, stag_x-1)
         elif move == DOWN:
-            stag_x = min(GRID_SIZE[0]-1, stag_x+1)
+            stag_x = min(self.grid_size[0]-1, stag_x+1)
         
         # do not move if there is a plant or agent in the new position
         if self.grid[stag_x][stag_y] != PLANT:
@@ -240,11 +255,11 @@ class parallel_env(ParallelEnv):
             if move == LEFT:
                 y = max(0, y-1)
             elif move == RIGHT:
-                y = min(GRID_SIZE[1]-1, y+1)
+                y = min(self.grid_size[1]-1, y+1)
             elif move == UP:
                 x = max(0, x-1)
             elif move == DOWN:
-                x = min(GRID_SIZE[0]-1, x+1)
+                x = min(self.grid_size[0]-1, x+1)
             self.agent_positions[a] = (x,y)
 
         rewards = {a: 0 for a in self.agents}
@@ -252,7 +267,7 @@ class parallel_env(ParallelEnv):
         # check if agent is on plant
         for a in self.agents:
             if old_grid[self.agent_positions[a]] == PLANT:
-                rewards[a] += PLANT_REWARD
+                rewards[a] += self.plant_reward
                 self.grid[self.agent_positions[a]] = NOTHING
                 self.results["plant"] += 1
 
@@ -271,10 +286,10 @@ class parallel_env(ParallelEnv):
                         stag_alone = False
                         break
                 if stag_alone:
-                    rewards[a] -= STAG_PENALTY
+                    rewards[a] -= self.stag_penalty
                     self.results["stag_pen"] += 1
                 else:
-                    rewards[a] += STAG_REWARD
+                    rewards[a] += self.stag_reward
                     self.results["stag"] += 1
                 self.grid[self.agent_positions[a]] = NOTHING
         
@@ -290,7 +305,7 @@ class parallel_env(ParallelEnv):
         # update grid with agent positions
         for a in self.agents:
             x,y = self.agent_positions[a]
-            self.grid[x][y] = BOTH if self.grid[x][y] == AGENT else AGENT
+            self.grid[x][y] = BOTH if (self.grid[x][y] == AGENT or self.grid[x][y] == BOTH) else AGENT
 
         # regenerate plants and stag if they were eaten
         if np.sum(self.grid == PLANT) < 2 or np.sum(self.grid == STAG) < 1:
@@ -300,8 +315,8 @@ class parallel_env(ParallelEnv):
 
     def state_to_obs(self, state, agent):
         obs = state.copy()
-        for x in range(GRID_SIZE[0]):
-            for y in range(GRID_SIZE[1]):
+        for x in range(self.grid_size[0]):
+            for y in range(self.grid_size[1]):
                 if state[x][y] == AGENT:
                     obs[x][y] = OBS_AGENT_SELF if (x,y) == self.agent_positions[agent] else OBS_AGENT_OTHER
                 elif state[x][y] == BOTH:
@@ -313,9 +328,9 @@ class parallel_env(ParallelEnv):
         return obs
 
     def obs_to_one_hot(self, obs):
-        one_hot_obs = np.zeros((GRID_SIZE[0], GRID_SIZE[1], N_OBS_TYPES))
-        for x in range(GRID_SIZE[0]):
-            for y in range(GRID_SIZE[1]):
+        one_hot_obs = np.zeros((self.grid_size[0], self.grid_size[1], N_OBS_TYPES))
+        for x in range(self.grid_size[0]):
+            for y in range(self.grid_size[1]):
                 one_hot_obs[x][y][obs[x][y]] = 1
         return one_hot_obs
 
@@ -336,6 +351,7 @@ class parallel_env(ParallelEnv):
         hands that are played.
         Returns the observations for each agent
         """
+        self.grid_history = []
         self.results = {"stag":0, "plant":0, "stag_pen":0}
         self.agents = self.possible_agents[:]
         self.num_moves = 0
@@ -355,6 +371,28 @@ class parallel_env(ParallelEnv):
 
     def env_logging_info(self, suffix):
         return {k+suffix:v for k,v in self.results.items()}
+    
+    def make_animated_mov(self):
+        # use seaborn and funcaanimation to make an animated plot of the game
+        # annotate with self.symbols
+        fig, ax = plt.subplots()
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.set_title("Game")
+        def animate(i):
+            ax.clear()
+            annotations = [self.symbols[item] for item in self.grid_history[i].flatten()]
+            annotations = np.array(annotations).reshape(self.grid_size)
+            sns.heatmap(self.grid_history[i], annot=annotations, fmt="", cmap="viridis", cbar=False, ax=ax)
+            ax.set_xticks([])
+            ax.set_yticks([])
+            # equal aspect ratio
+            ax.set_aspect('equal')
+        ani = animation.FuncAnimation(fig, animate, frames=len(self.grid_history), repeat=False)
+        now = datetime.datetime.now()
+        ani.save(f"{self.animation_folder}/game_{now.strftime('%Y%m%d_%H%M%S')}.mp4")
+        plt.close()
+
 
     def step(self, actions):
         """
@@ -383,6 +421,7 @@ class parallel_env(ParallelEnv):
         truncations = {agent: env_truncation for agent in self.agents}
         observations = {agent: self.process_obs(self.grid, agent) for agent in self.agents}
         self.state = self.grid
+        self.grid_history.append(self.grid.copy())
 
         # typically there won't be any information in the infos, but there must
         # still be an entry for each agent
@@ -390,6 +429,8 @@ class parallel_env(ParallelEnv):
 
         if env_truncation:
             self.agents = []
+            if self.animate:
+                self.make_animated_mov()
 
         if self.render_mode == "human":
             self.render()
