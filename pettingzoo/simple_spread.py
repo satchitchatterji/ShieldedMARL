@@ -7,9 +7,9 @@ import torch
 import matplotlib.pyplot as plt
 import wandb
 
-import action_wrappers
-import sensor_wrappers
-from shield_selector import ShieldSelector
+import wrappers.action_wrappers as action_wrappers
+import wrappers.sensor_wrappers as sensor_wrappers
+from shields.shield_selector import ShieldSelector
 
 from algos import *
 from env_selection import ALL_ENVS, ALL_ENVS_ARGS

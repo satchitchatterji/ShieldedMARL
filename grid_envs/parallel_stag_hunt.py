@@ -28,16 +28,6 @@ BOTH = 2
 PLANT = 3
 STAG = 4
 
-# observation types for agents
-N_OBS_TYPES = 6
-OBS_NOTHING = 0
-OBS_AGENT_SELF = 1
-OBS_AGENT_OTHER = 2
-OBS_AGENT_BOTH = 3
-OBS_PLANT = 4
-OBS_STAG = 5
-
-
 def env(render_mode=None):
     """
     The env function often wraps the environment in wrappers by default.
@@ -113,7 +103,16 @@ class parallel_env(ParallelEnv):
         self.animation_folder = "/Users/satch/Documents/Personal/ThesisPlayground/grid_envs/animations"
 
         self.eval_funcs = [self.make_animated_mov]
-        
+
+        # observation types for agents
+        self.n_obs_types = 6
+        self.obs_nothing = 0
+        self.obs_agent_self = 1
+        self.obs_agent_other = 2
+        self.obs_agent_both = 3
+        self.obs_plant = 4
+        self.obs_stag = 5
+                
 
     # Observation space should be defined here.
     # lru_cache allows observation and action spaces to be memoized, reducing clock cycles required to get each agent's space.
@@ -122,12 +121,12 @@ class parallel_env(ParallelEnv):
     def observation_space(self, agent):
         # gymnasium spaces are defined and documented here: https://gymnasium.farama.org/api/spaces/
         if self.one_hot_observations and self.flatten_observation:
-            return Box(low=0, high=1, shape=(self.grid_size[0]*self.grid_size[1]*N_OBS_TYPES,1), dtype=int)
+            return Box(low=0, high=1, shape=(self.grid_size[0]*self.grid_size[1]*self.n_obs_types,1), dtype=int)
         elif self.one_hot_observations:    
-            return Box(low=0, high=1, shape=(self.grid_size[0]*self.grid_size[1], N_OBS_TYPES), dtype=int)
+            return Box(low=0, high=1, shape=(self.grid_size[0]*self.grid_size[1], self.n_obs_types), dtype=int)
         elif self.flatten_observation:
-            return Box(low=0, high=N_OBS_TYPES-1, shape=(self.grid_size[0]*self.grid_size[1],1), dtype=int)
-        return Box(low=0, high=N_OBS_TYPES-1, shape=self.grid_size, dtype=int)
+            return Box(low=0, high=self.n_obs_types-1, shape=(self.grid_size[0]*self.grid_size[1],1), dtype=int)
+        return Box(low=0, high=self.n_obs_types-1, shape=self.grid_size, dtype=int)
         # TODO: Currently designed for 2 agents. Need to update for more agents
         # TODO: to categorical?
         # 0: nothing, 1: self, 2: other, 3: multiple including self, 4: plant, 5: stag
@@ -320,17 +319,17 @@ class parallel_env(ParallelEnv):
         for x in range(self.grid_size[0]):
             for y in range(self.grid_size[1]):
                 if state[x][y] == AGENT:
-                    obs[x][y] = OBS_AGENT_SELF if (x,y) == self.agent_positions[agent] else OBS_AGENT_OTHER
+                    obs[x][y] = self.obs_agent_self if (x,y) == self.agent_positions[agent] else self.obs_agent_other
                 elif state[x][y] == BOTH:
-                    obs[x][y] = OBS_AGENT_BOTH
+                    obs[x][y] = self.obs_agent_both
                 elif state[x][y] == PLANT:
-                    obs[x][y] = OBS_PLANT
+                    obs[x][y] = self.obs_plant
                 elif state[x][y] == STAG:
-                    obs[x][y] = OBS_STAG
+                    obs[x][y] = self.obs_stag
         return obs
 
     def obs_to_one_hot(self, obs):
-        one_hot_obs = np.zeros((self.grid_size[0], self.grid_size[1], N_OBS_TYPES))
+        one_hot_obs = np.zeros((self.grid_size[0], self.grid_size[1], self.n_obs_types))
         for x in range(self.grid_size[0]):
             for y in range(self.grid_size[1]):
                 one_hot_obs[x][y][obs[x][y]] = 1

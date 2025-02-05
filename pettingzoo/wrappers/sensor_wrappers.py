@@ -1,10 +1,7 @@
 import torch
 import numpy as np
-import sys
-sys.path.append("../grid_envs")
-import parallel_stag_hunt as psh
 
-from sensor_util import OnlineStats, normalized_pgg_distance
+from .sensor_util import OnlineStats, normalized_pgg_distance
 
 import warnings
 warnings.filterwarnings("ignore")
@@ -266,7 +263,7 @@ class MarkovStagHuntSensorWrapper(Wrapper):
     def one_hot_to_obs(self, one_hot_obs):
         GRID_SIZE = self.env.grid_size
         one_hot_obs = torch.tensor(one_hot_obs, dtype=torch.float32, device=self.device)
-        one_hot_obs = one_hot_obs.reshape((GRID_SIZE[0], GRID_SIZE[1], psh.N_OBS_TYPES))
+        one_hot_obs = one_hot_obs.reshape((GRID_SIZE[0], GRID_SIZE[1], self.env.n_obs_types))
         obs = torch.zeros((GRID_SIZE[0], GRID_SIZE[1]), dtype=torch.int32, device=self.device)
         for x in range(GRID_SIZE[0]):
             for y in range(GRID_SIZE[1]):
@@ -281,12 +278,12 @@ class MarkovStagHuntSensorWrapper(Wrapper):
         """
         obs = torch.tensor(obs, dtype=torch.float32, device=self.device)
         obs = self.one_hot_to_obs(obs)
-        stag_x, stag_y = torch.where(obs == psh.OBS_STAG)
+        stag_x, stag_y = torch.where(obs == self.env.obs_stag)
         stag_x, stag_y = stag_x[0], stag_y[0]
 
-        agent_self = torch.where(obs == psh.OBS_AGENT_SELF)
-        agent_other = torch.where(obs == psh.OBS_AGENT_OTHER)
-        both_agents = torch.where(obs == psh.OBS_AGENT_BOTH)
+        agent_self = torch.where(obs == self.env.obs_agent_self)
+        agent_other = torch.where(obs == self.env.obs_agent_other)
+        both_agents = torch.where(obs == self.env.obs_agent_both)
         try:
             agent_self = agent_self if len(agent_self[0]) > 0 else both_agents
             agent_self_x, agent_self_y = agent_self[0][0], agent_self[1][0]
