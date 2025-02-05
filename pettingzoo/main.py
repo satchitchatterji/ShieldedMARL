@@ -13,11 +13,11 @@ from shields.shield_selector import ShieldSelector
 
 from algos import *
 from env_selection import ALL_ENVS, ALL_ENVS_ARGS
-from config import config
+from run_episode import run_episode, eval_episode
 
+from config import config
 from util import get_new_seed
 
-from run_episode import run_episode, eval_episode
 
 config.seed = get_new_seed(config)
 np.random.seed(config.seed)
