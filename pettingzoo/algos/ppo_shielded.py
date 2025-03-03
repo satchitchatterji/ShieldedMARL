@@ -52,9 +52,7 @@ class ActorCriticShielded(nn.Module):
                         nn.Tanh(),
                         nn.Linear(64, 1)
                     )
-        
-        # self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.device = torch.device('cpu')
+
         # shield
         self.get_sensor_value_ground_truth = get_sensor_value_ground_truth
         # agents can share a shield if a shield is passed in
@@ -106,6 +104,10 @@ class ActorCriticShielded(nn.Module):
 
         elif self.shield.differentiable:  # PLPG
             # compute the shielded policy
+            if type(sensor_values) != torch.Tensor:
+                sensor_values = torch.tensor(sensor_values, dtype=torch.float32).to(self.get_device())
+            if type(base_actions) != torch.Tensor:
+                base_actions = torch.tensor(base_actions, dtype=torch.float32).to(self.get_device())
             actions = self.get_shielded_policy_batch_agnostic(base_actions, sensor_values)
             shielded_policy = Categorical(probs=actions)
 
@@ -170,6 +172,10 @@ class ActorCriticShielded(nn.Module):
         state_values = self.critic(state)
         
         return log_prob, state_values, dist_entropy
+    
+    def get_device(self):
+        # Check the device of the first parameter
+        return next(self.parameters()).device
 
 class PPOShielded:
     def __init__(self, 
@@ -186,12 +192,12 @@ class PPOShielded:
                  policy_kw_args={},
                  vf_coef=0.5,
                  entropy_coef=0.01,
+                 device="cpu",
                  **kwargs # made to be comptible with DQN
                  ):
+        self.device = device
+        print("[PPO INFO] Using device: ", self.device)
 
-        # self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.device = torch.device("cpu")
-        
         self.gamma = gamma
         self.eps_clip = eps_clip
         self.train_epochs = train_epochs
@@ -235,7 +241,7 @@ class PPOShielded:
                 {'params': self.policy.critic.parameters(), 'lr': self.lr_critic}
             ])
         self.policy_old = ActorCriticShielded(self.state_dim, self.action_dim, **self.policy_kw_args).to(self.device)
-        self.policy_old.load_state_dict(self.policy.state_dict())
+        self.policy_old.load_state_dict(self.policy.state_dict()).to(self.device)
 
     def set_policy_critic(self, critic):
         del self.optimizer
@@ -261,7 +267,8 @@ class PPOShielded:
 
     def select_action(self, state):
         with torch.no_grad():
-            state = torch.FloatTensor(state).to(self.device)
+            if type(state) != torch.Tensor:
+                state = torch.tensor(state, dtype=torch.float32).to(self.device)
             action, action_logprob, state_val = self.policy_old.act(state)
         
         if not self.eval_mode:
@@ -274,8 +281,10 @@ class PPOShielded:
 
     def get_action_probs(self, state):
         with torch.no_grad():
-            state = torch.FloatTensor(state).to(self.device)
+            if type(state) != torch.Tensor:
+                state = torch.tensor(state, dtype=torch.float32).to(self.device)
             action_probs = self.policy_old.actor(state)
+
         return action_probs
 
     def update(self):
@@ -321,12 +330,12 @@ class PPOShielded:
             ####### Safety loss ###########################################
             if vars(self.policy_safety_calculater) == {}:
                 # no shield
-                safety_loss = torch.Tensor([0])
+                safety_loss = torch.tensor([0], device=self.device)
             else:
                 policy_safeties = self.policy_safety_calculater.get_policy_safety(
                     self.policy.info["sensor_value"], self.policy.info["base_policy"]
                 )
-                policy_safeties = policy_safeties.flatten()
+                policy_safeties = policy_safeties.flatten().to(self.device)
                 safety_loss = -torch.log(policy_safeties)
                 safety_loss = torch.mean(safety_loss)
 
@@ -344,11 +353,14 @@ class PPOShielded:
             
         # Copy new weights into old policy
         self.policy_old.load_state_dict(self.policy.state_dict())
+        self.policy_old.to(self.device)
 
         # clear buffer
         self.buffer.clear()
     
     def act(self, state):
+        if type(state) != torch.Tensor:
+            state = torch.tensor(state, dtype=torch.float32).to(self.device)
         return self.select_action(state)
 
     def update_reward(self, reward, done):

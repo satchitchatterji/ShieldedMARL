@@ -1,10 +1,10 @@
 import torch
 import numpy as np
-import sys
-sys.path.append("../grid_envs")
-import parallel_stag_hunt as psh
 
-from sensor_util import OnlineStats, normalized_pgg_distance
+from .sensor_util import OnlineStats, normalized_pgg_distance
+
+import warnings
+warnings.filterwarnings("ignore")
 
 warned = False
 USE_CUDA = False
@@ -27,31 +27,39 @@ def get_wrapper(env):
     else:
         raise NotImplementedError(f"Sensor wrapper for {env} not implemented.")
 
-class IdentitySensorWrapper:
+class Wrapper:
+    """
+    Abstract wrapper class
+    """
+    def __init__(self, env, num_sensors=None, device=None):
+        self.env = env
+        self.device = device
+        if num_sensors is not None:
+            self.num_sensors = num_sensors
+        else:
+            self.num_sensors = env.observation_spaces[env.agents[0]].shape[0]
+
+        self.translation_func = None
+    
+    def __call__(self, x):
+        raise NotImplementedError("Wrapper not implemented.")
+
+class IdentitySensorWrapper(Wrapper):
     """
     Sensor wrapper for the PettingZoo environments. 
     """
-    def __init__(self, env, num_sensors=None):
-        self.env = env
-        if num_sensors is not None:
-            self.num_sensors = num_sensors
-        else:
-            self.num_sensors = env.observation_spaces[env.agents[0]].shape[0]
+    def __init__(self, env, num_sensors=None, device=None):
+        super().__init__(env, num_sensors=num_sensors, device=device)
     
     def __call__(self, x):
-        return x
+        return torch.tensor(x, dtype=torch.float32, device=self.device)
     
-class StagHuntSensorWrapper:
+class StagHuntSensorWrapper(Wrapper):
     """
     Sensor wrapper for the Stag Hunt environment. 
     """
-    def __init__(self, env, num_sensors=None):
-        self.env = env
-        if num_sensors is not None:
-            self.num_sensors = num_sensors
-        else:
-            self.num_sensors = env.observation_spaces[env.agents[0]].shape[0]
-        self.device = torch.device("cuda" if torch.cuda.is_available() and USE_CUDA else "cpu")
+    def __init__(self, env, num_sensors=None, device=None):
+        super().__init__(env, num_sensors=num_sensors, device=device)
         self.translation_func = self.stag_counter
 
         self.buffer_size = 50
@@ -94,14 +102,13 @@ class StagHuntSensorWrapper:
         else:
             return torch.stack([self.translation_func(x[i]) for i in range(x.shape[0])])
         
-class PublicGoodsSensorWrapper:
+class PublicGoodsSensorWrapper(Wrapper):
     """
     Sensor wrapper for the Public Goods Game environment. 
     """
-    def __init__(self, env, num_sensors=None):
-        self.env = env
-        self.num_sensors = num_sensors
-        self.device = torch.device("cuda" if torch.cuda.is_available() and USE_CUDA else "cpu")
+    def __init__(self, env, num_sensors=None, device=None):
+        super().__init__(env, num_sensors=num_sensors, device=device)
+
         if env.observe_f:
             self.translation_func = self.obs_with_f
         else:
@@ -114,11 +121,12 @@ class PublicGoodsSensorWrapper:
         self.ticker = 0
 
     def obs_without_f(self, obs):
-        return obs
+        return torch.tensor(obs, dtype=torch.float32, device=self.device)
     
     def obs_with_f(self, obs):
         if self.env.num_moves == 0:
             self._reset_values()
+
         obs = obs.cpu().numpy()
         agent_other = obs[:-1]
         agent_identity = int((self.ticker*2)%2)
@@ -143,13 +151,13 @@ class PublicGoodsSensorWrapper:
         else:
             return torch.stack([self.translation_func(x[i]) for i in range(x.shape[0])])
 
-class PublicGoodsManySensorWrapper:
+class PublicGoodsManySensorWrapper(Wrapper):
     """
     Sensor wrapper for the Public Goods Game environment. 
     """
-    def __init__(self, env, num_sensors=None):
-        self.env = env
-        self.device = torch.device("cuda" if torch.cuda.is_available() and USE_CUDA else "cpu")
+    def __init__(self, env, num_sensors=None, device=None):
+        super().__init__(env, num_sensors=num_sensors, device=device)
+        
         self.num_sensors = 1
         if env.observe_f:
             self.translation_func = self.obs_with_f
@@ -157,7 +165,7 @@ class PublicGoodsManySensorWrapper:
             self.translation_func = self.obs_without_f
 
     def obs_without_f(self, obs):
-        return obs
+        return torch.tensor(obs, dtype=torch.float32, device=self.device)
     
     def obs_with_f(self, obs):
         obs = obs.cpu().numpy()
@@ -172,11 +180,12 @@ class PublicGoodsManySensorWrapper:
         else:
             return torch.stack([self.translation_func(x[i]) for i in range(x.shape[0])])
 
-class CartSafeSensorWrapper:
+class CartSafeSensorWrapper(Wrapper):
     """
     Sensor wrapper for the CartSafe environment. 
     """
     def __init__(self, env, num_sensors=None):
+        raise NotImplementedError("CartSafeSensorWrapper not implemented.")
         self.env = env
         self.num_sensors = 4
         self.device = torch.device("cuda" if torch.cuda.is_available() and USE_CUDA else "cpu")
@@ -208,6 +217,7 @@ class GridNavSensorWrapper:
     Sensor wrapper for the GridNav environment. 
     """
     def __init__(self, env, num_sensors=None):
+        raise NotImplementedError("GridNavSensorWrapper not implemented.")
         self.env = env
         self.num_sensors = 4
         self.device = torch.device("cuda" if torch.cuda.is_available() and USE_CUDA else "cpu")
@@ -241,21 +251,23 @@ class GridNavSensorWrapper:
 
 
 
-class MarkovStagHuntSensorWrapper:
+class MarkovStagHuntSensorWrapper(Wrapper):
 
-    def __init__(self, env, num_sensors=None):
-        self.env = env
+    def __init__(self, env, num_sensors=None, device=None):
+        super().__init__(env, num_sensors=num_sensors, device=device)
+
         self.num_sensors = 6 # based on stag relative position
-        self.device = torch.device("cuda" if torch.cuda.is_available() and USE_CUDA else "cpu")
         self.translation_func = self.stag_surrounded
+        self.env = env
 
     def one_hot_to_obs(self, one_hot_obs):
-        GRID_SIZE = psh.GRID_SIZE
-        one_hot_obs = one_hot_obs.reshape((GRID_SIZE[0], GRID_SIZE[1], psh.N_OBS_TYPES))
-        obs = np.zeros((GRID_SIZE[0], GRID_SIZE[1]), dtype=int)
+        GRID_SIZE = self.env.grid_size
+        one_hot_obs = torch.tensor(one_hot_obs, dtype=torch.float32, device=self.device)
+        one_hot_obs = one_hot_obs.reshape((GRID_SIZE[0], GRID_SIZE[1], self.env.n_obs_types))
+        obs = torch.zeros((GRID_SIZE[0], GRID_SIZE[1]), dtype=torch.int32, device=self.device)
         for x in range(GRID_SIZE[0]):
             for y in range(GRID_SIZE[1]):
-                obs[x][y] = np.argmax(one_hot_obs[x][y])
+                obs[x][y] = torch.argmax(one_hot_obs[x][y]).item()
         return obs
     
     def stag_surrounded(self, obs):
@@ -264,13 +276,14 @@ class MarkovStagHuntSensorWrapper:
                     if the agent is close to the stag, and
                     if the stag is surrounded by both agents.
         """
-        obs = self.one_hot_to_obs(obs.cpu().numpy())
-        stag_x, stag_y = np.where(obs == psh.OBS_STAG) # assuming only one stag
+        obs = torch.tensor(obs, dtype=torch.float32, device=self.device)
+        obs = self.one_hot_to_obs(obs)
+        stag_x, stag_y = torch.where(obs == self.env.obs_stag)
         stag_x, stag_y = stag_x[0], stag_y[0]
 
-        agent_self = np.where(obs == psh.OBS_AGENT_SELF)
-        agent_other = np.where(obs == psh.OBS_AGENT_OTHER)
-        both_agents = np.where(obs == psh.OBS_AGENT_BOTH)
+        agent_self = torch.where(obs == self.env.obs_agent_self)
+        agent_other = torch.where(obs == self.env.obs_agent_other)
+        both_agents = torch.where(obs == self.env.obs_agent_both)
         try:
             agent_self = agent_self if len(agent_self[0]) > 0 else both_agents
             agent_self_x, agent_self_y = agent_self[0][0], agent_self[1][0]
@@ -301,8 +314,9 @@ class MarkovStagHuntSensorWrapper:
         if agent_other_x-1 <= stag_x <= agent_other_x+1 and agent_other_y-1 <= stag_y <= agent_other_y+1:
             stag_near_other = 1
 
-        return torch.tensor(np.array([stag_left, stag_right, stag_above, stag_below, stag_near_self, stag_near_other], dtype=np.int32), 
-                            dtype=torch.int32, device=self.device)
+        return torch.tensor([stag_left, stag_right, stag_above, stag_below, stag_near_self, stag_near_other], device=self.device, dtype=torch.int32)
+        # return torch.tensor(np.array([stag_left, stag_right, stag_above, stag_below, stag_near_self, stag_near_other], dtype=np.int32), 
+        #                     dtype=torch.int32, device=self.device)
 
     def __call__(self, x):
         # TODO: batch processing
@@ -317,6 +331,7 @@ class WaterworldSensorWrapper:
     This is to convert the sensor values to a (probabalistic) form that the shield can use.
     """
     def __init__(self, env, output_type="invert"):
+        raise NotImplementedError("WaterworldSensorWrapper not implemented.")
         self.env = env
         self.num_inputs = env.observation_spaces[env.agents[0]].shape[0]
         self.output_type = output_type

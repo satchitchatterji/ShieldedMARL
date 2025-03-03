@@ -1,6 +1,6 @@
 {
     "use_wandb": false,
-    "device": "cpu",
+    "device": "mps",
     "algo": "SIPPO",
     "env": "publicgoods",
     "max_cycles": 25,

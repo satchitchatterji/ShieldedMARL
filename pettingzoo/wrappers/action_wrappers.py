@@ -1,15 +1,27 @@
 import numpy as np
+import torch
 
-
+def get_wrapper(env_name, num_actions, device, **kwargs):
+    """
+    Get the appropriate action wrapper for the given environment.
+    """
+    if env_name == "waterworld":
+        return WaterworldActionWrapper(num_actions, device=device, **kwargs)
+    else:
+        return IdentityActionWrapper(num_actions, device=device, **kwargs)
+    
 class IdentityActionWrapper:
     """
     Default action wrapper for PettingZoo environments.
     """
-    def __init__(self, num_actions):
+    def __init__(self, num_actions, device, **kwargs):
         self.num_actions = num_actions
+        self.device = device
 
     def __call__(self, action):
+        # action = torch.tensor(action, dtype=torch.float32, device=self.device)
         return action
+    
 class WaterworldActionWrapper:
     """
     Wrapper for the Waterworld environment's action space.

@@ -2,6 +2,8 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 
+import warnings
+warnings.filterwarnings("ignore")
 
 SMALL_SIZE = 14
 MEDIUM_SIZE = 16
@@ -30,77 +32,106 @@ group_softmax = [explore_policy_softmax_IQL, explore_policy_softmax_SIQL]
 group_e_greedy = [explore_policy_e_greedy_IQL, explore_policy_e_greedy_SIQL]
 
 
-# topic = "total_reward_mean"
-# topic = "eval_mean_safety"
-topic = "eval_total_reward_mean"
+# # topic = "total_reward_mean"
+# # topic = "eval_mean_safety"
+# topic = "eval_total_reward_mean"
 
-labels = ["IPPO", "SIPPO"]; save_ext = "_cent_ppo.png"; plot_group = group_ppo
-# labels = ["IQL (softmax)", "SIQL (softmax)"]; save_ext = "_cent_softmax.png"; plot_group = group_softmax
-# labels = ["IQL ($\epsilon$-greedy)", "SIQL ($\epsilon$-greedy)"]; save_ext = "_cent_e_greedy.png"; plot_group = group_e_greedy
+topics = ["total_reward_mean", "eval_mean_safety", "eval_total_reward_mean"]
+groups = [group_ppo, group_softmax, group_e_greedy]
+all_labels = [["IPPO", "SIPPO"], ["IQL (softmax)", "SIQL (softmax)"], ["IQL ($\epsilon$-greedy)", "SIQL ($\epsilon$-greedy)"]]
+save_exts = ["_cent_ppo.png", "_cent_softmax.png", "_cent_e_greedy.png"]
 
-# get all csv files in directory
-files = os.listdir()
-files = [x for x in files if x.endswith(".csv")]
+for topic in topics:
+    print("\nTopic:", topic)
+    for i, group in enumerate(groups):
+        labels = all_labels[i]
+        save_ext = save_exts[i]
+        plot_group = group
 
-# find file with topic in one of the columns
-correct_file = ""
-for file in files:
-    with open(file, "r") as f:
-        line = f.readline()
-        if "- "+topic in line:
-            correct_file = file
-            break
+        # get all csv files in directory
+        files = os.listdir()
+        files = [x for x in files if x.endswith(".csv")]
 
-print("File:", file)
-df = pd.read_csv(correct_file)
-print(df.columns)
+        # find file with topic in one of the columns
+        correct_file = ""
+        for file in files:
+            with open(file, "r") as f:
+                line = f.readline()
+                if "- "+topic in line:
+                    correct_file = file
+                    break
 
-cols = [x for x in df.columns if x.endswith(topic)]
-df = df[cols]
+        # print("File:", file)
+        df = pd.read_csv(correct_file)
+        # print(df.columns)
 
-# get default colour wheel for matplotlib
-prop_cycle = plt.rcParams['axes.prop_cycle']
-colors = prop_cycle.by_key()['color']
+        cols = [x for x in df.columns if x.endswith(topic)]
+        df = df[cols]
 
-dfs = []
+        # get default colour wheel for matplotlib
+        prop_cycle = plt.rcParams['axes.prop_cycle']
+        colors = prop_cycle.by_key()['color']
 
-# ippo_df = df[[x+" - "+topic for x in ippo_cols]]
-# ippo_df["mean"] = ippo_df.mean(axis=1)
-# ippo_df["std"] = ippo_df.std(axis=1)
-for item in plot_group:
-    dfs.append(df[[x+" - "+topic for x in item]])
-    # take mean and std of each algo
-    dfs[-1]["mean"] = dfs[-1].mean(axis=1)
-    dfs[-1]["std"] = dfs[-1].std(axis=1)    
+        dfs = []
 
-window = int(len(dfs[0])*percent_rolling)
-# plot
-fig, ax = plt.subplots()
+        # ippo_df = df[[x+" - "+topic for x in ippo_cols]]
+        # ippo_df["mean"] = ippo_df.mean(axis=1)
+        # ippo_df["std"] = ippo_df.std(axis=1)
+        for item in plot_group:
+            dfs.append(df[[x+" - "+topic for x in item]])
+            # take mean and std of each algo
+            dfs[-1]["mean"] = dfs[-1].mean(axis=1)
+            dfs[-1]["std"] = dfs[-1].std(axis=1)    
 
-for i, df in enumerate(dfs):
-    x = df.rolling(window).mean().index if topic == "total_reward_mean" else df.rolling(window).mean().index*10
-    ax.plot(x, df["mean"].rolling(window).mean(), label=labels[i], color=colors[i])
-    ax.fill_between(x, (df["mean"] - df["std"]).rolling(window).mean(), (df["mean"] + df["std"]).rolling(window).mean(), alpha=0.2, color=colors[i])
+        window = int(len(dfs[0])*percent_rolling)
+        # plot
+        fig, ax = plt.subplots()
 
-ax.set_xlabel("Episode")
-ax.grid()
-plt.tight_layout()
+        for i, df in enumerate(dfs):
+            x = df.rolling(window).mean().index if topic == "total_reward_mean" else df.rolling(window).mean().index*10
+            ax.plot(x, df["mean"].rolling(window).mean(), label=labels[i], color=colors[i])
+            ax.fill_between(x, (df["mean"] - df["std"]).rolling(window).mean(), (df["mean"] + df["std"]).rolling(window).mean(), alpha=0.2, color=colors[i])
+            # print mean and std of last window
+            # print(f"{labels[i]}: {df['mean'].rolling(window).mean().iloc[-1]:.3f} ± {df['std'].rolling(window).mean().iloc[-1]:.3f}")
+            print(f"{df['mean'].rolling(window).mean().iloc[-1]:.3f}±{df['std'].rolling(window).mean().iloc[-1]:.3f}")
 
-if topic == "total_reward_mean":
-    ax.set_ylabel("Reward")
-    ax.set_title("Mean Reward per Episode (Training)")
-    ax.legend(loc="center left")
-    plt.savefig(f"training{save_ext}", dpi=300, bbox_inches="tight")
+        ax.set_xlabel("Episode")
+        ax.grid()
+        plt.tight_layout()
 
-if topic == "eval_mean_safety":
-    ax.set_ylabel("Mean Action==Continue")
-    ax.set_title("Mean Continue (Safety) per Episode")
-    plt.savefig(f"safety{save_ext}", dpi=300, bbox_inches="tight")
+        if topic == "total_reward_mean":
+            ax.set_ylabel("Reward")
+            ax.set_title("Mean Reward per Episode (Training)")
+            ax.legend(loc="center left")
+            plt.savefig(f"training{save_ext}", dpi=300, bbox_inches="tight")
 
-if topic == "eval_total_reward_mean":
-    ax.set_ylabel("Reward")
-    ax.set_title("Mean Reward per Episode (Evaluation)")
-    plt.savefig(f"eval{save_ext}", dpi=300, bbox_inches="tight")
+        if topic == "eval_mean_safety":
+            ax.set_ylabel("Mean Action==Continue")
+            ax.set_title("Mean Continue (Safety) per Episode")
+            plt.savefig(f"safety{save_ext}", dpi=300, bbox_inches="tight")
+
+        if topic == "eval_total_reward_mean":
+            ax.set_ylabel("Reward")
+            ax.set_title("Mean Reward per Episode (Evaluation)")
+            plt.savefig(f"eval{save_ext}", dpi=300, bbox_inches="tight")
 
 
-plt.show()
+        # plt.show()
+
+
+"""
+\begin{table*}[]
+\centering
+\begin{tabular}{l|lll}
+\hline
+\multicolumn{1}{c|}{\textbf{Algorithm}} & \multicolumn{1}{c}{\textbf{$\sum r$ (training)}} & \multicolumn{1}{c}{\textbf{$\sum r$ (eval)}} & \multicolumn{1}{c}{\textbf{mean safety/cooperation}} \\ \hline
+IPPO                                    & 42.353±36.618                                    & 42.833±35.812                                & 0.826±0.229                                          \\
+SIPPO                                   & 100.500±0.000                                    & 100.500±0.000                                & 1.000±0.000                                          \\ \hline
+IQL ($\epsilon$-greedy)                 & 34.620±46.590                                    & 34.700±46.531                                & 0.682±0.228                                          \\
+SIQL ($\epsilon$-greedy)                & 100.500±0.000                                    & 100.500±0.000                                & 1.000±0.000                                          \\ \hline
+IQL (softmax)                           & 1.727±1.012                                      & 30.100±38.611                                & 0.733±0.210                                          \\
+SIQL (softmax)                          & 100.500±0.000                                    & 100.500±0.000                                & 1.000±0.000                                          \\ \hline
+\end{tabular}
+\end{table*}
+
+"""

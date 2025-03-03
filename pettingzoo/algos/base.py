@@ -11,7 +11,8 @@ class BaseMARLAlgo:
                  sh_params=None, 
                  algorithm_params=None,
                  alpha=None,
-                 shielded_ratio=0.0
+                 shielded_ratio=0.0,
+                 device="cpu"
                  ):
         self.agents = {}
         self.env = env
@@ -23,6 +24,7 @@ class BaseMARLAlgo:
         self.algorithm_params = algorithm_params
         self.alpha = alpha
         self.shielded_ratio = shielded_ratio
+        self.device = device
         self.create_agents()
 
     @abstractmethod

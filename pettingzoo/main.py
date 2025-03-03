@@ -7,18 +7,23 @@ import torch
 import matplotlib.pyplot as plt
 import wandb
 
-import action_wrappers
-import sensor_wrappers
-from shield_selector import ShieldSelector
+import wrappers.action_wrappers as action_wrappers
+import wrappers.sensor_wrappers as sensor_wrappers
+from shields.shield_selector import ShieldSelector
 
 from algos import *
 from env_selection import ALL_ENVS, ALL_ENVS_ARGS
-from config import config
-
 from run_episode import run_episode, eval_episode
 
+from config import config
+from util import get_new_seed
+
+
+config.seed = get_new_seed(config)
 np.random.seed(config.seed)
 torch.manual_seed(config.seed)
+
+device = torch.device(config.device)
 
 system = os.name
 
@@ -38,7 +43,6 @@ print(f"[INFO] Training for {max_training_episodes} episodes of {max_cycles} cyc
 env_creator_func = ALL_ENVS[config.env]
 env_creator_args = ALL_ENVS_ARGS[config.env]
 env_creator_args.update({"max_cycles": max_cycles})
-
 env = env_creator_func(render_mode=None, **env_creator_args)
 env.reset()
 
@@ -51,9 +55,9 @@ if hasattr(env.observation_space(env.possible_agents[0]), "shape") and len(env.o
 else: 
     observation_space = env.observation_space(env.possible_agents[0]).n         # for discrete spaces?
 print(f"[INFO] Observation space: {observation_space}, Action space: {n_discrete_actions}")
-action_wrapper = action_wrappers.IdentityActionWrapper(n_discrete_actions)
-# sensor_wrapper = sensor_wrappers.IdentitySensorWrapper(env, observation_space)
-sensor_wrapper = sensor_wrappers.get_wrapper(env_name)(env, observation_space)
+
+action_wrapper = action_wrappers.get_wrapper(env_name, n_discrete_actions, device)
+sensor_wrapper = sensor_wrappers.get_wrapper(env_name)(env, observation_space, device)
 
 shield_selector = ShieldSelector(env_name=env_name, 
                                  n_actions=action_wrapper.num_actions, 
@@ -71,10 +75,11 @@ sh_params = {
     "shield_program": shield_selector.file,
     "observation_type": "ground truth",
     "get_sensor_value_ground_truth": sensor_wrapper,
+    "device": device
 }
 
-ppo_params = ["update_timestep", "train_epochs", "gamma", "eps_clip", "lr_actor", "lr_critic", "vf_coef", "entropy_coef"]
-dqn_params = ["update_timestep", "train_epochs", "gamma", "buffer_size", "batch_size", "lr", "eps_decay", "eps_min", "tau", "target_update_type", "explore_policy", "eval_policy", "on_policy"]
+ppo_params = ["update_timestep", "train_epochs", "gamma", "eps_clip", "lr_actor", "lr_critic", "vf_coef", "entropy_coef", "device"]
+dqn_params = ["update_timestep", "train_epochs", "gamma", "buffer_size", "batch_size", "lr", "eps_decay", "eps_min", "tau", "target_update_type", "explore_policy", "eval_policy", "on_policy", "device"]
 extracted_ppo = {k: v for k, v in vars(config).items() if k in ppo_params}
 extracted_dqn = {k: v for k, v in vars(config).items() if k in dqn_params}
 all_algo_params = {k: v for k, v in vars(config).items() if k in ppo_params or k in dqn_params}
@@ -96,7 +101,8 @@ algo = ALL_ALGORITHMS[algo_name](env=env,
                                  sh_params=sh_params,
                                  algorithm_params=all_algo_params,
                                  alpha=alpha,
-                                 shielded_ratio=config.shielded_ratio
+                                 shielded_ratio=config.shielded_ratio,
+                                 device=device
                                  )
 
 ############################################ SAFETY CALC ############################################
@@ -129,7 +135,7 @@ with open(f"histories/configs/{env_name}/{algo_name}/{cur_time}.json", "w") as f
     f.write(s)
 
 with open("histories/configs/run_history.csv", "a") as f:
-    f.write(f"{cur_time}, {env_name}, {algo_name}_{cur_time}, \n")
+    f.write(f"{cur_time}, {env_name}, {algo_name}_{cur_time}, {config.seed}\n")
 
 ############################################ TRAINING ############################################
 
@@ -156,6 +162,9 @@ try:
                 eval_safety_hists.append(eval_safety_hist)
             eval_hists.append(eval_reward_hists)
             eval_safeties.append(eval_safety_hists)
+            if "eval_funcs" in dir(env):
+                for eval_func in env.eval_funcs:
+                    eval_func(env=env, algo=algo, ep=ep, experiment_name=f"{algo_name}_{cur_time}")
 
             algo.save(f"models/{env_name}/{algo_name}_{cur_time}/ep{ep}")
 

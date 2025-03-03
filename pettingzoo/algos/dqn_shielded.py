@@ -40,14 +40,17 @@ class DQNShielded(object):
                  explore_policy='e_greedy',
                  eval_policy='greedy',
                  on_policy=False,
+                 device='none',
                  **kwargs # made to be compatible with PPO
                  ):
+        
+        self.device = device
+        print(f"[DQN INFO] Using device: {self.device}")
 
         self.observation_type = 'discrete'
         self.action_type = 'discrete'
         self.learning = True
-        # self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        self.device = torch.device('cpu')
+
         self.step = 0
         self.on_policy = on_policy
 
@@ -146,8 +149,6 @@ class DQNShielded(object):
             torch.nn.Linear(input_len, 64),
             torch.nn.ReLU(),
             torch.nn.Linear(64, 64),
-            # torch.nn.ReLU(),
-            # torch.nn.Linear(128, 64),
             torch.nn.ReLU(),
             torch.nn.Linear(64, output_len)
         )
@@ -163,6 +164,7 @@ class DQNShielded(object):
         if self.update_target_type == 'hard':
             if self.step % self.update_timestep == 0:
                 self.target_func_approx.load_state_dict(self.func_approx.state_dict())
+                self.target_func_approx.to(self.device)
                 self.target_func_approx.eval()
         elif self.update_target_type == 'soft':
             for target_param, param in zip(self.target_func_approx.parameters(), self.func_approx.parameters()):
@@ -179,10 +181,9 @@ class DQNShielded(object):
     def random_action(self, probs=None):
         """ Choose a random action (random arm to pull), with probabilities probs
             If probs is None, then each choice is equally likely. """
-        n_actions = len(probs)
         if sum(probs) != 1.0:
             probs = probs / sum(probs)
-        return np.random.choice(range(n_actions), p=probs)
+        return torch.distributions.Categorical(probs=probs).sample().item()
 
     def e_greedy(self, Q_values):
         """ Greedily choose the action with highest est. action-value,
@@ -190,9 +191,9 @@ class DQNShielded(object):
         n_actions = len(Q_values)
 
         if random.random() < self.epsilon:
-            return np.random.choice(range(n_actions))
+            return torch.randint(0, n_actions, (1,)).item()
         else:
-            return np.argmax(Q_values.detach().cpu().numpy())
+            return torch.argmax(Q_values).item()
 
     def e_greedy_policy(self, Q_values):
         """ Return the epsilon-greedy policy for a given state in the form of a tensor of probabilities """
@@ -223,8 +224,8 @@ class DQNShielded(object):
         if self.shield is not None:
             sensor_values = self.shield.get_sensor_values(x)
 
-        sensor_values = sensor_values.to("cpu")
-        base_actions = base_actions.to("cpu")
+        # sensor_values = sensor_values.to("cpu")
+        # base_actions = base_actions.to("cpu")
 
         self.debug_info = {"sensor_value": sensor_values, "base_policy": base_actions}
 
@@ -278,7 +279,7 @@ class DQNShielded(object):
 
         # Q_values = self.calc_action_values(state.unsqueeze(0)).squeeze(0).detach()
         Q_values_prob, Q_values = self.get_action_probs(state, return_action_values=True)
-        action = self.random_action(np.array(Q_values_prob))
+        action = self.random_action(Q_values_prob)
 
         if self.training:
             # update epsilon
@@ -325,7 +326,7 @@ class DQNShielded(object):
         ####### Safety loss ###########################################
         if self.shield is None:
             # no shield
-            safety_loss = torch.Tensor([0]*len(sensor_values_batch))
+            safety_loss = torch.tensor([0]*len(sensor_values_batch)).to(self.device)
         else:
             policy_safeties = self.shield.get_policy_safety(sensor_values_batch, base_actions_batch)
             policy_safeties = policy_safeties.flatten()
@@ -357,14 +358,14 @@ class DQNShielded(object):
     
     def get_action_probs(self, state, return_action_values=False):
         with torch.no_grad():
-            state = torch.Tensor(state).to(self.device)
+            state = torch.tensor(state).to(self.device)
             Q_values = self.calc_action_values(state.unsqueeze(0)).squeeze(0).detach()
             Q_values_norm = self.normalize_Q_values(Q_values)
         
         if self.eval_mode and self.eval_policy == 'greedy': # shield breaks if there's no safe actions
             eps = self.epsilon
             self.epsilon = 0.001
-            Q_values_norm = self.e_greedy_policy(Q_values)
+            Q_values_norm = self.e_greedy_policy(Q_values).to(self.device)
             self.epsilon = eps
  
         shielded_policy = self.get_shielded_action(state, Q_values_norm).squeeze(0).to(self.device)
@@ -382,46 +383,42 @@ class DQNShielded(object):
 
         if len(self.history) <= self.batch_size:
             return
+    
+        # Uniformly sample batch indices
+        batch_indices = torch.randint(0, len(self.history) - 1, (self.batch_size,), device=self.device)
 
-        self.func_approx.train()
+        # Extract batch data
+        batch = [self.history[idx] for idx in batch_indices.cpu().numpy()]
+        next_batch = [self.history[idx + 1] for idx in batch_indices.cpu().numpy()]
 
-        # uniformly sample from memory
-        current_batch = torch.Tensor(random.sample(range(len(self.history)-1), self.batch_size)).to(self.device)
+        cur_states = torch.stack([item[STATE] for item in batch]).to(self.device)
+        cur_actions = torch.tensor([item[ACTION] for item in batch], device=self.device)
+        cur_Q_vals = torch.stack([item[Q_VALS] for item in batch]).to(self.device)
+        rewards = torch.tensor([item[REWARD] for item in batch], device=self.device)
+        terminals = torch.tensor([item[TERMINAL] for item in batch], dtype=torch.bool, device=self.device)
+        next_states = torch.stack([item[STATE] for item in next_batch]).to(self.device)
 
-        X_train, y_train = [], []
-        for batch_idx in current_batch:
-            batch_idx = int(batch_idx)
-            cur_state = self.history[batch_idx][STATE]
-            cur_action = self.history[batch_idx][ACTION]
-            cur_Q_vals = self.history[batch_idx][Q_VALS]
-            cur_reward = self.history[batch_idx][REWARD]
-            next_state = self.history[batch_idx+1][STATE]
-            terminal = self.history[batch_idx][TERMINAL]
+        # Compute next Q-values for all next states
+        next_Q_vals = self.target_func_approx(next_states).detach()
 
-            X_train.append(cur_state)
+        # Compute targets
+        if self.on_policy:
+            next_actions = torch.tensor([item[ACTION] for item in next_batch], device=self.device)
+            next_Q_values_selected = next_Q_vals[torch.arange(next_Q_vals.size(0)), next_actions]
+        else:
+            next_Q_values_selected = next_Q_vals.max(dim=1).values
 
-            # define target using SARSA update rule
-            target = cur_Q_vals
-            if terminal:
-                target[cur_action] = cur_reward
-            else:
-                next_action = self.history[batch_idx+1][ACTION]
-                next_Q_vals = self.history[batch_idx+1][Q_VALS]
-                next_Q_vals = self.target_func_approx(next_state).detach().numpy()
-                self.update_rule = "cur_reward + self.gamma*(next_Q_vals[next_action])"
-                if self.on_policy:
-                    target[cur_action] = cur_reward + self.gamma*(next_Q_vals[next_action])
-                else:
-                    target[cur_action] = cur_reward + self.gamma*(max(next_Q_vals))
+        # Update targets based on the SARSA rule
+        updated_targets = cur_Q_vals.clone()
+        updated_targets[torch.arange(cur_Q_vals.size(0)), cur_actions] = rewards + (~terminals) * (self.gamma * next_Q_values_selected)
 
-            y_train.append(target)
-
-        X_train = torch.vstack(X_train).to(self.device)
-        y_train = torch.vstack(y_train).to(self.device)
+        # Train using X_train and y_train
+        X_train = cur_states
+        y_train = updated_targets
         base_loss = self.base_loss_fn(self.func_approx(X_train), y_train)
 
-        cur_states = torch.stack([self.history[int(i)][STATE] for i in current_batch]).to(self.device).float()
-        cur_action_dist = torch.stack([self.history[int(i)][ACTION_DIST] for i in current_batch]).to(self.device).float()
+        cur_states = torch.stack([self.history[int(i)][STATE] for i in batch_indices]).to(self.device).float()
+        cur_action_dist = torch.stack([self.history[int(i)][ACTION_DIST] for i in batch_indices]).to(self.device).float()
 
         safety_augmentations =  self.get_safety_loss(cur_states, cur_action_dist)
         safety_loss = torch.mean(safety_augmentations).to(self.device)

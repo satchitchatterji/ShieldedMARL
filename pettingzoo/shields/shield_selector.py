@@ -25,3 +25,4 @@ class ShieldSelector:
     def verify(self):
         full_path = os.path.join(self.base_dir, self.file)
         assert os.path.exists(full_path), f"Shield program not found at {full_path}."
+        print(f"[INFO] Shield program found at {full_path}.")

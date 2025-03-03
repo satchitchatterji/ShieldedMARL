@@ -105,6 +105,9 @@ for topic in topics:
     x = range(len(group_labels))
     ax.bar(x, [means[group_label]["IPPO"] for group_label in group_labels], width, label="IPPO", yerr=[stds[group_label]["IPPO"] for group_label in group_labels], capsize=5)
     ax.bar([i+width for i in x], [means[group_label]["SIPPO"] for group_label in group_labels], width, label="SIPPO", yerr=[stds[group_label]["SIPPO"] for group_label in group_labels], capsize=5)
+    print(f"IPPO: ", [round(means[group_label]["IPPO"],3) for group_label in group_labels], [round(stds[group_label]["IPPO"],3) for group_label in group_labels])
+    print(f"SIPPO: ", [round(means[group_label]["SIPPO"],3) for group_label in group_labels], [round(stds[group_label]["SIPPO"],3) for group_label in group_labels])
+    
     ax.set_xlabel("$\mu$")
     ax.set_xticks([i+width/2 for i in x])
     ax.set_xticklabels(group_labels)       
@@ -127,3 +130,18 @@ for topic in topics:
         save_ext = "_safety_epgg.png"
 
     plt.savefig(f"bar_safety{save_ext}", dpi=300, bbox_inches="tight")
+
+
+"""
+\begin{table}[]
+\centering
+\begin{tabular}{l|lll}
+\hline
+\multicolumn{1}{c|}{\textbf{Algorithm}} & \multicolumn{1}{c}{\textbf{$\bar{r}$ (training)}} & \multicolumn{1}{c}{\textbf{$\bar{r}$ (eval)}} & \multicolumn{1}{c}{\textbf{safety/cooperation}} \\ \hline
+IPPO                                    & 1.985 ± 0.025                                     & 1.990 ± 0.019                                 & 0.006 ± 0.005                                   \\
+SIPPO ($\mathcal{T}_{pure}$)            & 4.000 ± 0.000                                     & 4.000 ± 0.000                                 & 1.000 ± 0.000                                   \\
+SIPPO ($\mathcal{T}_{mixed}$)           & 2.574 ± 0.477                                     & 2.633 ± 0.424                                 & 0.576 ± 0.081                                   \\ \hline
+\end{tabular}
+\end{table}
+
+"""
