@@ -1,4 +1,4 @@
-Installation on Linux
+Installation on Linux/Mac/WSL
 
 conda create -n pls python=3.10
 conda activate pls
@@ -15,4 +15,4 @@ pip install -e .
 
 pip install numpy==1.23.5
 pip install pettingzoo
-pip install pandas matplotlib tqdm wandb torch
+pip install pandas matplotlib tqdm wandb torch pandas

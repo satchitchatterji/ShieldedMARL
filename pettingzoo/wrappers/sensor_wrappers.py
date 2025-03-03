@@ -184,11 +184,11 @@ class CartSafeSensorWrapper(Wrapper):
     """
     Sensor wrapper for the CartSafe environment. 
     """
-    def __init__(self, env, num_sensors=None):
-        raise NotImplementedError("CartSafeSensorWrapper not implemented.")
+    def __init__(self, env, num_sensors=None, device=None):
+        # raise NotImplementedError("CartSafeSensorWrapper not implemented.")
+        super().__init__(env, num_sensors=num_sensors, device=device)
         self.env = env
         self.num_sensors = 4
-        self.device = torch.device("cuda" if torch.cuda.is_available() and USE_CUDA else "cpu")
         self.translation_func = self.cart_safe_simple
     
     def cart_safe_simple(self, obs):
