@@ -6,5 +6,7 @@ def get_new_seed(config):
         run_histories = pd.read_csv("histories/configs/run_history.csv")
         config.seed = int(run_histories["seed"].dropna().max()+1)
         print(f"[INFO] Seed not provided. Using new seed: {config.seed}")
+    else:
+        print(f"[INFO] Using provided seed: {config.seed}")
 
     return config.seed
