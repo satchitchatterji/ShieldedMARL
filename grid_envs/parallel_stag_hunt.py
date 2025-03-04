@@ -102,7 +102,9 @@ class parallel_env(ParallelEnv):
         self.animate = False
         self.animation_folder = "/Users/satch/Documents/Personal/ThesisPlayground/grid_envs/animations"
 
-        self.eval_funcs = [self.make_animated_mov]
+        self.eval_funcs = [
+            self.make_animated_mov
+            ]
 
         # observation types for agents
         self.n_obs_types = 6
@@ -147,7 +149,9 @@ class parallel_env(ParallelEnv):
                 string += self.symbols[item] + " | "
             string += "\n|"
         string += "-"*int(cols*4)
-        print(self.agent_positions)
+        print("players: ", self.agent_positions)
+        print("stags:   ", self.stag_positions)
+        print("plants:  ", self.plant_positions)
 
         return string
 
@@ -178,17 +182,18 @@ class parallel_env(ParallelEnv):
 
     def generate_plants_and_stag(self):
         # starting with 2 plants
-        while np.sum(self.grid == PLANT) < self.n_plants:
+        while len(self.plant_positions) < self.n_plants:
             x,y = np.random.randint(0, self.grid_size[0]), np.random.randint(0, self.grid_size[1])
-            if self.grid[x][y] == 0:
+            if self.grid[x][y] == NOTHING:
                 self.grid[x][y] = PLANT
                 self.plant_positions.append((x,y))
         
         # starting with 1 stag
-        while np.sum(self.grid == STAG) < self.n_stags:
+        while len(self.stag_positions) < self.n_stags:
             x,y = np.random.randint(0, self.grid_size[0]), np.random.randint(0, self.grid_size[1])
-            if self.grid[x][y] == 0:
+            if self.grid[x][y] == NOTHING:
                 self.grid[x][y] = STAG
+                self.stag_positions.append((x,y))
 
     def generate_starting_grid(self):
         self.grid = np.zeros(self.grid_size, dtype=np.int32)
@@ -202,9 +207,10 @@ class parallel_env(ParallelEnv):
 
         return self.grid
 
-    def move_stag_towards_closest_agent(self):
-        stag_x, stag_y = np.where(self.grid == STAG)
-        stag_x, stag_y = stag_x[0], stag_y[0]
+    def move_stag(self):
+        move = None
+        stag_x, stag_y = self.stag_positions[0]
+        # stag_x, stag_y = stag_x[0], stag_y[0]
         closest_agent = None
         closest_dist = np.inf
         for a in self.agents:
@@ -218,19 +224,15 @@ class parallel_env(ParallelEnv):
         if np.random.rand() < self.stag_move_prob and closest_agent is not None:
             x,y = self.agent_positions[closest_agent]
             if stag_x < x:
-                return DOWN
+                move = DOWN
             elif stag_x > x:
-                return UP
+                move = UP
             elif stag_y < y:
-                return RIGHT
+                move = RIGHT
             elif stag_y > y:
-                return LEFT
+                move = LEFT
         else:
-            return np.random.choice(MOVES)
-
-    def move_stag(self, move):
-        stag_x, stag_y = np.where(self.grid == STAG)
-        stag_x, stag_y = stag_x[0], stag_y[0]
+            move = np.random.choice(MOVES)
 
         if move == LEFT:
             stag_y = max(0, stag_y-1)
@@ -240,11 +242,8 @@ class parallel_env(ParallelEnv):
             stag_x = max(0, stag_x-1)
         elif move == DOWN:
             stag_x = min(self.grid_size[0]-1, stag_x+1)
-        
-        # do not move if there is a plant or agent in the new position
-        if self.grid[stag_x][stag_y] != PLANT:
-            self.grid[self.grid == STAG] = NOTHING
-            self.grid[stag_x][stag_y] = STAG
+
+        return stag_x, stag_y
 
     def update_grid(self, actions):
         old_grid = self.grid.copy()
@@ -271,7 +270,9 @@ class parallel_env(ParallelEnv):
                 rewards[a] += self.plant_reward
                 self.grid[self.agent_positions[a]] = NOTHING
                 self.results["plant"] += 1
-
+                if self.agent_positions[a] in self.plant_positions:
+                    self.plant_positions.remove(self.agent_positions[a])
+                
         # # check if both agents are on stag
         # if all([old_grid[self.agent_positions[a]] == STAG for a in self.agents]):
         #     for a in self.agents:
@@ -293,15 +294,34 @@ class parallel_env(ParallelEnv):
                     rewards[a] += self.stag_reward
                     self.results["stag"] += 1
                 self.grid[self.agent_positions[a]] = NOTHING
+
+                if self.agent_positions[a] in self.stag_positions:
+                    self.stag_positions.remove(self.agent_positions[a])
+
         
         for a in self.agents:
             old_x, old_y = old_positions[a]
             self.grid[old_x][old_y] = NOTHING
         
         # move stag
-        if np.sum(self.grid == STAG) > 0:
-            move = self.move_stag_towards_closest_agent()
-            self.move_stag(move)
+        if len(self.stag_positions) > 0:
+            new_stag_pos = self.move_stag()
+            # do not move stag if new_stag_pos is on plant
+            if self.grid[new_stag_pos] == PLANT:
+                pass
+            elif new_stag_pos in self.agent_positions.values():
+                # stag moves on agent
+                self.grid[self.stag_positions[0]] = NOTHING
+                self.stag_positions = []
+                # penalize agents if stag moves on them
+                for a in self.agents:
+                    if self.agent_positions[a] == new_stag_pos:
+                        rewards[a] -= self.stag_penalty
+                        self.results["stag_pen"] += 1
+            else:
+                self.grid[self.stag_positions[0]] = NOTHING
+                self.stag_positions = [new_stag_pos]
+                self.grid[new_stag_pos] = STAG
 
         # update grid with agent positions
         for a in self.agents:
@@ -309,7 +329,7 @@ class parallel_env(ParallelEnv):
             self.grid[x][y] = BOTH if (self.grid[x][y] == AGENT or self.grid[x][y] == BOTH) else AGENT
 
         # regenerate plants and stag if they were eaten
-        if np.sum(self.grid == PLANT) < 2 or np.sum(self.grid == STAG) < 1:
+        if len(self.plant_positions) < self.n_plants or len(self.stag_positions) < self.n_stags:
             self.generate_plants_and_stag()
 
         return rewards
@@ -357,6 +377,7 @@ class parallel_env(ParallelEnv):
         self.agents = self.possible_agents[:]
         self.num_moves = 0
         self.plant_positions = []
+        self.stag_positions = []
         self.grid = self.generate_starting_grid()
         observations = {agent: self.process_obs(self.grid, agent) for agent in self.agents}
         infos = {agent: {} for agent in self.agents}
@@ -438,4 +459,6 @@ class parallel_env(ParallelEnv):
 
         if self.render_mode == "human":
             self.render()
+
+        # print(self.stag_positions, self.grid==STAG)
         return observations, rewards, terminations, truncations, infos
