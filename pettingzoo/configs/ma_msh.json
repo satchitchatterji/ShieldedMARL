@@ -1,20 +1,22 @@
 {
     "use_wandb": false,
+    "wandb_project_prefix": "ma_msh",
     "device": "cpu",
-    "algo": "SIPPO",
+
     "env": "markov_stag_hunt",
-    "max_cycles": 1000,
-    "max_eps": 10,
+    "max_cycles": 200,
+    "max_eps": 1000,
     "eval_every": 100,
     "n_eval": 1,
-    "seed": 14,
+    "seed": -1,
+
     "shield_alpha": 1.0,
-    "shield_file": "default",
     "shield_version": 7,
     "shield_eval_version": 7,
-    "shielded_ratio": 0.3,
+    "shielded_ratio": 1,
     "shield_diff": true,
-    "shield_eps": 0.1,
+
+    "algo": "SIPPO",
     "update_timestep": 256,
     "train_epochs": 10,
     "gamma": 0.99,
@@ -22,15 +24,5 @@
     "lr_actor": 0.001,
     "lr_critic": 0.001,
     "vf_coef": 0.3,
-    "entropy_coef": 0.03,
-    "buffer_size": 1000,
-    "batch_size": 64,
-    "lr": 0.001,
-    "tau": 0.01,
-    "target_update_type": "none",
-    "eps_min": 0.05,
-    "eps_decay": 0.995,
-    "explore_policy": "e_greedy",
-    "eval_policy": "greedy",
-    "on_policy": false
+    "entropy_coef": 0.01
 }
