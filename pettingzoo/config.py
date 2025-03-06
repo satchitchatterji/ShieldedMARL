@@ -16,6 +16,12 @@ parser.add_argument("--use_wandb",
                     help="Use wandb for logging."
                     )
 
+parser.add_argument("--wandb_project_prefix",
+                    type=str,
+                    default="",
+                    help="Prefix for wandb project name."
+                    )
+
 parser.add_argument("--device",
                     type=str,
                     default="cpu",

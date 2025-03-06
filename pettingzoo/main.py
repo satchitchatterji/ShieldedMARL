@@ -26,6 +26,7 @@ torch.manual_seed(config.seed)
 device = torch.device(config.device)
 
 system = os.name
+wandb_project_prefix = config.wandb_project_prefix
 
 # cur_time = time.time()
 now = datetime.datetime.now()
@@ -144,7 +145,7 @@ eval_hists = []
 eval_safeties = []
 eval_episodes = []
 mode = "online" if config.use_wandb else "disabled"
-wandb.init(project=f"{system}_{env_name}", name=f"{algo_name}_{cur_time}", config=config_dict, mode=mode)
+wandb.init(project=f"{wandb_project_prefix}_{system}_{env_name}", name=f"{algo_name}_{cur_time}", config=config_dict, mode=mode)
 
 ep=0
 try:

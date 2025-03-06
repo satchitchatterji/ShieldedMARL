@@ -10,6 +10,10 @@ This JSON configuration file provides settings for training and evaluation in re
   Enable or disable `wandb` (Weights & Biases) for logging and experiment tracking.  
   - **Default**: `false`
 
+- **`wandb_project`**: *(String)*
+  Optional suffix to the wandb project name (the rest of the name is auto-generated).
+  - **Default**: ``''`` *(empty string)*
+
 - **`devide`**: *(String)*
   Device to use for training.
   - **Default**: `cpu`
@@ -63,7 +67,7 @@ This JSON configuration file provides settings for training and evaluation in re
   - **Default**: `0`
 
 - **`shielded_ratio`**: *(Float)*  
-  Minimum ratio of shielded agents to unshielded agents.  
+  Minimum ratio of shielded agents to total agents.  
   - **Default**: `1.0`
 
 - **`shield_diff`**: *(Boolean)*  
