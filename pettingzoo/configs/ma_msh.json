@@ -33,7 +33,7 @@
         "rewards": [2, 10, -2], 
         "n_plants": 2, 
         "n_stags": 1,
-        "render_mode":"human"
+        "render_mode": "none"
     }
 
 }

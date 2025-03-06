@@ -27,11 +27,11 @@ MOVES = [LEFT, RIGHT, UP, DOWN, STAY]  # List of all valid moves
 # Grid Cell Value Definitions
 # ------------------------------
 # These constants define what each cell in the grid may contain.
-NOTHING = 0  # Empty cell
-AGENT = 1    # Cell occupied by an agent
-BOTH = 2     # Cell with more than one agent
-PLANT = 3    # Cell with a plant resource
-STAG = 4     # Cell with a stag (prey)
+NOTHING = 0     # Empty cell
+AGENT = 1       # Cell occupied by an agent
+MULTIPLE = 2    # Cell occupied by multiple agents
+PLANT = 3       # Cell with a plant resource
+STAG = 4        # Cell with a stag (prey)
 
 # ------------------------------
 # Environment Wrappers
@@ -152,13 +152,12 @@ class parallel_env(ParallelEnv):
         ]
 
         # Define constants for observation types.
-        self.n_obs_types = 6
+        self.n_obs_types = 5
         self.obs_nothing = 0
         self.obs_agent_self = 1
         self.obs_agent_other = 2
-        self.obs_agent_both = 3
-        self.obs_plant = 4
-        self.obs_stag = 5
+        self.obs_plant = 3
+        self.obs_stag = 4
 
     @functools.lru_cache(maxsize=None)
     def observation_space(self, agent):
@@ -182,10 +181,8 @@ class parallel_env(ParallelEnv):
             # Flattened observation with each grid cell represented by an integer.
             return Box(low=0, high=self.n_obs_types - 1, shape=(self.grid_size[0] * self.grid_size[1], 1), dtype=int)
         # Default case: non-flattened, non-one-hot observation as a grid.
-        return Box(low=0, high=self.n_obs_types - 1, shape=self.grid_size, dtype=int)
-        # TODO: Currently designed for 2 agents. Need to update for more agents
-        # TODO: to categorical?
-        # 0: nothing, 1: self, 2: other, 3: multiple including self, 4: plant, 5: stag
+        return Box(low=0, high=self.n_obs_types - 1, shape=self.grid_size, dtype=int) 
+        # 0: nothing, 1: self, 2: other, 3: plant, 4: stag
 
     @functools.lru_cache(maxsize=None)
     def action_space(self, agent):
@@ -230,7 +227,7 @@ class parallel_env(ParallelEnv):
         Renders the current state of the environment.
         Depending on the render_mode, this may print to the terminal or open a graphical window.
         """
-        if self.render_mode is None:
+        if self.render_mode is None or self.render_mode == "none":
             gymnasium.logger.warn(
                 "You are calling render method without specifying any render mode."
             )
@@ -284,8 +281,8 @@ class parallel_env(ParallelEnv):
         # Randomly place each agent on the grid.
         for a in self.agents:
             x, y = np.random.randint(0, self.grid_size[0]), np.random.randint(0, self.grid_size[1])
-            # If cell is empty, mark as AGENT; if already occupied, mark as BOTH.
-            self.grid[x][y] = AGENT if self.grid[x][y] == NOTHING else BOTH
+            # If cell is empty, mark as AGENT; if already occupied, mark as MULTIPLE.
+            self.grid[x][y] = AGENT if self.grid[x][y] == NOTHING else MULTIPLE
             self.agent_positions[a] = (x, y)
 
         # Generate plants and stags on the grid.
@@ -448,8 +445,8 @@ class parallel_env(ParallelEnv):
         # ------------------------------
         for a in self.agents:
             x, y = self.agent_positions[a]
-            # Mark cell as BOTH if an agent was already there; otherwise mark as AGENT.
-            self.grid[x][y] = BOTH if (self.grid[x][y] == AGENT or self.grid[x][y] == BOTH) else AGENT
+            # Mark cell as MULTIPLE if an agent was already there; otherwise mark as AGENT.
+            self.grid[x][y] = MULTIPLE if (self.grid[x][y] == AGENT or self.grid[x][y] == MULTIPLE) else AGENT
 
         # Regenerate plants and stag if they have been removed.
         if len(self.plant_positions) < self.n_plants or len(self.stag_positions) < self.n_stags:
@@ -469,21 +466,25 @@ class parallel_env(ParallelEnv):
         Returns:
             np.ndarray: The processed observation grid.
         """
-        obs = state.copy()
-        for x in range(self.grid_size[0]):
-            for y in range(self.grid_size[1]):
-                if state[x][y] == AGENT:
-                    # Mark self vs. other agents.
-                    obs[x][y] = self.obs_agent_self if (x, y) == self.agent_positions[agent] else self.obs_agent_other
-                elif state[x][y] == BOTH:
-                    obs[x][y] = self.obs_agent_both
-                elif state[x][y] == PLANT:
-                    obs[x][y] = self.obs_plant
-                elif state[x][y] == STAG:
-                    obs[x][y] = self.obs_stag
-        return obs
+        obs_self = np.zeros(self.grid_size, dtype=np.int32)
+        for a in self.agents:
+            x, y = self.agent_positions[a]
+            if a == agent:
+                obs_self[x][y] = self.obs_agent_self
+        for x, y in self.plant_positions:
+            obs_self[x][y] = self.obs_plant
+        for x, y in self.stag_positions:
+            obs_self[x][y] = self.obs_stag
 
-    def obs_to_one_hot(self, obs):
+        obs_other = np.zeros(self.grid_size, dtype=np.int32)
+        for a in self.agents:
+            if a != agent:
+                x, y = self.agent_positions[a]
+                obs_other[x][y] = self.obs_agent_other
+
+        return obs_self, obs_other
+
+    def obs_to_one_hot(self, obs_self, obs_other):
         """
         Converts a grid observation into one-hot encoded format.
 
@@ -496,7 +497,9 @@ class parallel_env(ParallelEnv):
         one_hot_obs = np.zeros((self.grid_size[0], self.grid_size[1], self.n_obs_types))
         for x in range(self.grid_size[0]):
             for y in range(self.grid_size[1]):
-                one_hot_obs[x][y][obs[x][y]] = 1
+                one_hot_obs[x][y][obs_self[x][y]] = 1
+                one_hot_obs[x][y][obs_other[x][y]] = 1
+
         return one_hot_obs
 
     def process_obs(self, obs, agent):
@@ -511,9 +514,9 @@ class parallel_env(ParallelEnv):
         Returns:
             np.ndarray: The final processed observation.
         """
-        obs = self.state_to_obs(obs, agent)
+        obs_self, obs_other = self.state_to_obs(obs, agent)
         if self.one_hot_observations:
-            obs = self.obs_to_one_hot(obs)
+            obs = self.obs_to_one_hot(obs_self, obs_other)
         if self.flatten_observation:
             obs = obs.reshape(-1)
         return obs

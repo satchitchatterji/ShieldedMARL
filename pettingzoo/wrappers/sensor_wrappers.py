@@ -256,104 +256,96 @@ class MarkovStagHuntSensorWrapper(Wrapper):
         self.num_sensors = 6  # based on stag relative position
         self.env = env
 
-    def one_hot_to_obs(self, one_hot_obs):
+    def multi_hot_to_obs(self, multi_hot_obs):
         """
-        Vectorized inverse of obs_to_one_hot (and process_obs), 
-        converting a flattened or grid-shaped one-hot tensor back to a discrete observation grid.
-        
-        Handles both single observations and batches.
+        Converts a possibly flattened multi-hot observation back to its grid shape.
+        In the multi-hot encoding, each cell is a binary vector (0 or 1) across n_obs_types.
+        Handles both single observations ([H, W, n_obs_types]) and batched ([B, H, W, n_obs_types]).
+        If flattened, the observation is reshaped to either:
+          - (H, W, n_obs_types) for a single observation, or
+          - (B, H, W, n_obs_types) for batched observations.
         """
         GRID_SIZE = self.env.grid_size
         n_obs_types = self.env.n_obs_types
 
-        # Ensure input is a torch tensor on the correct device.
-        if not torch.is_tensor(one_hot_obs):
-            one_hot_obs = torch.tensor(one_hot_obs, dtype=torch.float32, device=self.device)
+        # Ensure the input is a torch.Tensor on the proper device.
+        if not torch.is_tensor(multi_hot_obs):
+            multi_hot_obs = torch.tensor(multi_hot_obs, dtype=torch.float32, device=self.device)
         else:
-            one_hot_obs = one_hot_obs.to(self.device)
+            multi_hot_obs = multi_hot_obs.to(self.device)
 
         # Check input dimensions to determine if it is flattened.
-        # If flatten_observation was True, the observation becomes 1D for a single obs
-        # or 2D for batched obs.
-        if one_hot_obs.dim() == 1:
+        if multi_hot_obs.dim() == 1:
             # Flattened single observation: reshape back to (H, W, n_obs_types)
-            one_hot_obs = one_hot_obs.view(GRID_SIZE[0], GRID_SIZE[1], n_obs_types)
-        elif one_hot_obs.dim() == 2 and one_hot_obs.shape[1] == GRID_SIZE[0] * GRID_SIZE[1] * n_obs_types:
+            multi_hot_obs = multi_hot_obs.view(GRID_SIZE[0], GRID_SIZE[1], n_obs_types)
+        elif multi_hot_obs.dim() == 2 and multi_hot_obs.shape[1] == GRID_SIZE[0] * GRID_SIZE[1] * n_obs_types:
             # Flattened batched observation: reshape to (B, H, W, n_obs_types)
-            one_hot_obs = one_hot_obs.view(-1, GRID_SIZE[0], GRID_SIZE[1], n_obs_types)
+            multi_hot_obs = multi_hot_obs.view(-1, GRID_SIZE[0], GRID_SIZE[1], n_obs_types)
         # Otherwise, we assume the tensor is already in shape (H, W, n_obs_types) or (B, H, W, n_obs_types).
+        return multi_hot_obs
 
-        # Vectorized conversion: take the argmax over the one-hot channel dimension.
-        return torch.argmax(one_hot_obs, dim=-1)
-
-    def stag_surrounded(self, one_hot_obs):
+    def stag_surrounded(self, multi_hot_obs):
         """
-        Vectorized version for batched (or single) one-hot observations.
+        Vectorized version for batched (or single) multi-hot observations.
         Returns a tensor of shape [B, 6] (or [6] for a single observation) where each column corresponds to:
         [stag_left, stag_right, stag_above, stag_below, stag_near_self, stag_near_other]
+
+        Assumes that each channel in the multi-hot observation is a binary mask (with values 0 or 1)
+        and that for each entity (stag, agent_self, agent_other) exactly one pixel in the grid is active.
         """
-        # Convert one-hot to observation indices
-        obs = self.one_hot_to_obs(one_hot_obs)
-        # Ensure batch dimension exists (if not, add it)
+        # Unflatten and ensure the observation is in grid form.
+        obs = self.multi_hot_to_obs(multi_hot_obs)
         single_obs = False
-        if obs.dim() == 2:
+        if obs.dim() == 3:  # [H, W, n_obs_types]
             obs = obs.unsqueeze(0)
             single_obs = True
 
-        B, H, W = obs.shape
+        B, H, W, _ = obs.shape
 
-        # Create coordinate grids for rows and columns
+        # Create coordinate grids for rows and columns.
         grid_x = torch.arange(H, device=self.device).view(1, H, 1).expand(B, H, W)
         grid_y = torch.arange(W, device=self.device).view(1, 1, W).expand(B, H, W)
 
-        # Get stag positions via mask (assuming exactly one stag per observation)
-        stag_mask = (obs == self.env.obs_stag).float()  # shape [B, H, W]
-        # Multiply the mask by grid indices then sum over the grid
+        # Extract each entity's binary mask directly.
+        stag_mask = obs[..., self.env.obs_stag].float()         # [B, H, W]
+        agent_self_mask = obs[..., self.env.obs_agent_self].float()  # [B, H, W]
+        agent_other_mask = obs[..., self.env.obs_agent_other].float()  # [B, H, W]
+
+        # Compute positions by weighting grid coordinates by the binary masks.
+        # (Assumes exactly one pixel is active per channel.)
         stag_x = (stag_mask * grid_x).view(B, -1).sum(dim=1)
         stag_y = (stag_mask * grid_y).view(B, -1).sum(dim=1)
-
-        # For agent self, if not found then fall back on both agents
-        agent_self_mask = (obs == self.env.obs_agent_self).float()
-        both_agents_mask = (obs == self.env.obs_agent_both).float()
-        # If no agent_self exists, use both_agents mask (vectorized check)
-        agent_self_sum = agent_self_mask.view(B, -1).sum(dim=1, keepdim=True)
-        agent_self_mask = torch.where(agent_self_sum.view(B, 1, 1) == 0, both_agents_mask, agent_self_mask)        
         agent_self_x = (agent_self_mask * grid_x).view(B, -1).sum(dim=1)
         agent_self_y = (agent_self_mask * grid_y).view(B, -1).sum(dim=1)
-
-        # Similarly for agent other
-        agent_other_mask = (obs == self.env.obs_agent_other).float()
-        agent_other_sum = agent_other_mask.view(B, -1).sum(dim=1, keepdim=True)
-        agent_other_mask = torch.where(agent_other_sum.view(B, 1, 1) == 0, both_agents_mask, agent_other_mask)        
         agent_other_x = (agent_other_mask * grid_x).view(B, -1).sum(dim=1)
         agent_other_y = (agent_other_mask * grid_y).view(B, -1).sum(dim=1)
 
-        # Compute relative differences between stag and agent_self
+        # Compute relative differences between stag and agent_self.
         rel_x = stag_x - agent_self_x  # vertical difference
         rel_y = stag_y - agent_self_y  # horizontal difference
 
-        # Determine direction booleans
+        # Determine direction booleans (1 if true, 0 if false).
         stag_left   = (rel_y < 0).int()
         stag_right  = (rel_y > 0).int()
         stag_above  = (rel_x < 0).int()
         stag_below  = (rel_x > 0).int()
 
-        # Check if stag is within one cell (in Moore neighborhood) for each agent
+        # Check if stag is within one cell (Moore neighborhood) for each agent.
         near_self = ((stag_x >= agent_self_x - 1) & (stag_x <= agent_self_x + 1) &
                      (stag_y >= agent_self_y - 1) & (stag_y <= agent_self_y + 1)).int()
         near_other = ((stag_x >= agent_other_x - 1) & (stag_x <= agent_other_x + 1) &
                       (stag_y >= agent_other_y - 1) & (stag_y <= agent_other_y + 1)).int()
 
-        # Stack the computed values to form the sensor output [B, 6]
+        # Stack the computed values to form the sensor output [B, 6].
         result = torch.stack([stag_left, stag_right, stag_above, stag_below, near_self, near_other], dim=1)
 
-        # If the input was a single observation, remove the batch dimension before returning
+        # If the input was a single observation, remove the batch dimension.
         if single_obs:
             result = result.squeeze(0)
         return result
 
     def __call__(self, x):
-        # Now x can be a single observation or a batch in one-hot encoding.
+        # x is now expected to be in multi-hot encoding (flattened or grid-shaped).
         return self.stag_surrounded(x)
         
 class WaterworldSensorWrapper:
