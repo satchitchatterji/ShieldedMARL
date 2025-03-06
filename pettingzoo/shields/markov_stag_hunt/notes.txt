@@ -33,3 +33,6 @@ shield_v3.pl:
     - sensor_wrapper = MarkovStagHuntSensorWrapper::stag_surrounded
     - interpretation of rules:
         - never hunt stag 
+
+Shield 7: T_strong
+Shield 8: T_weak
