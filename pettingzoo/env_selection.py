@@ -34,17 +34,17 @@ ALL_ENVS = {
 # grid_size=(5,5),stag_move_prob=0.1,rewards=(2, 10, -2),n_agents=2,n_plants=2,n_stags=1
 
 ALL_ENVS_ARGS = {
-    "simple_spread_v3": {"N": 3, "local_ratio": 0.5, "continuous_actions": False},
-    "markov_stag_hunt": {"n_agents": 3, "grid_size": (10, 10), "stag_move_prob": 0.0, "rewards": (2, 10, -2), "n_plants": 2, "n_stags": 1},
-    "simple_stag_v0": {"game": "stag", "num_actions": 2},
-    "simple_pd_v0": {"game": "pd", "num_actions": 2},
-    "simple_chicken_v0": {"game": "chicken", "num_actions": 2},
-    "centipede": {"randomize_players": True, "growth_rate": 1},
-    "publicgoods": {"initial_endowment": 2, "mult_factor": None, "observe_f": True, "f_params": [1, 1]},
-    # "publicgoods": {"initial_endowment": 2, "mult_factor": 2.5, "observe_f": False},
-    "publicgoodsmany": {"n_agents":10, "initial_endowment": 10, "mult_factor": None, "observe_f": True, "f_params": [100, 0.5]},
-    "CartSafe-v0": {"env_name": "CartSafe-v0"},
-    "GridNav-v0": {"env_name": "GridNav-v0", "gridsize": 10}
+    "simple_spread_v3": {"N": 3, "local_ratio": 0.5, "continuous_actions": False, "render_mode":None},
+    "markov_stag_hunt": {"n_agents": 3, "grid_size": (10, 10), "stag_move_prob": 0.0, "rewards": (2, 10, -2), "n_plants": 2, "n_stags": 1, "render_mode":None},
+    "simple_stag_v0": {"game": "stag", "num_actions": 2, "render_mode":None},
+    "simple_pd_v0": {"game": "pd", "num_actions": 2, "render_mode":None},
+    "simple_chicken_v0": {"game": "chicken", "num_actions": 2, "render_mode":None},
+    "centipede": {"randomize_players": True, "growth_rate": 1, "render_mode":None},
+    "publicgoods": {"initial_endowment": 2, "mult_factor": None, "observe_f": True, "f_params": [1, 1], "render_mode":None},
+    # "publicgoods": {"initial_endowment": 2, "mult_factor": 2.5, "observe_f": False, "render_mode":None},
+    "publicgoodsmany": {"n_agents":10, "initial_endowment": 10, "mult_factor": None, "observe_f": True, "f_params": [100, 0.5], "render_mode":None},
+    "CartSafe-v0": {"env_name": "CartSafe-v0", "render_mode":None},
+    "GridNav-v0": {"env_name": "GridNav-v0", "gridsize": 10, "render_mode":None}
 }
 
 # To add a new env:

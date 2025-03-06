@@ -5,10 +5,10 @@
 
     "env": "markov_stag_hunt",
     "max_cycles": 200,
-    "max_eps": 1000,
+    "max_eps": 1,
     "eval_every": 100,
     "n_eval": 1,
-    "seed": -1,
+    "seed": 16,
 
     "shield_alpha": 1.0,
     "shield_version": 7,
@@ -24,5 +24,16 @@
     "lr_actor": 0.001,
     "lr_critic": 0.001,
     "vf_coef": 0.3,
-    "entropy_coef": 0.01
+    "entropy_coef": 0.01,
+
+    "env_config": {
+        "n_agents": 5,
+        "grid_size": [10, 10], 
+        "stag_move_prob": 0.0, 
+        "rewards": [2, 10, -2], 
+        "n_plants": 2, 
+        "n_stags": 1,
+        "render_mode":"human"
+    }
+
 }

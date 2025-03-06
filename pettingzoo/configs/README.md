@@ -26,6 +26,10 @@ This JSON configuration file provides settings for training and evaluation in re
   Environment name for training the model.  
   - **Example**: `"simple_pd_v0"`
 
+-- **`env_config`**: *(Str/Dict)*
+  Environment configuration as a dictionary or a string containing a valid dictionary.
+  - **Default**: `{}` (default env config in `env_selection.py`)
+
 - **`max_cycles`**: *(Integer)*  
   Maximum number of cycles in each episode.  
   - **Default**: `25`

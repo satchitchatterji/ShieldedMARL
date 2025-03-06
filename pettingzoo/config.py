@@ -41,6 +41,12 @@ parser.add_argument("--env",
                     help=f"Environment to use. Options are {ALL_ENVS.keys()}"
                     )
 
+parser.add_argument("--env_config",
+                    type=dict,
+                    default={},
+                    help="Config for the environment. See env_selection.py for examples."
+                    )
+
 parser.add_argument("--max_cycles",
                     type=int,
                     default=25,

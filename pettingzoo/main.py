@@ -43,8 +43,9 @@ print(f"[INFO] Training for {max_training_episodes} episodes of {max_cycles} cyc
 
 env_creator_func = ALL_ENVS[config.env]
 env_creator_args = ALL_ENVS_ARGS[config.env]
+env_creator_args.update(config.env_config)
 env_creator_args.update({"max_cycles": max_cycles})
-env = env_creator_func(render_mode=None, **env_creator_args)
+env = env_creator_func(**env_creator_args)
 env.reset()
 
 env_name = env.metadata["name"]
@@ -88,6 +89,8 @@ alpha = config.shield_alpha
 
 
 ############################################ ALGO SELECTION ############################################
+
+print(f"[INFO] Using algorithm: {config.algo}, with n_agents: {env.n_agents}")
 
 algo_name = config.algo
 
