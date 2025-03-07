@@ -118,7 +118,6 @@ def setup_experiment():
     )
     sh_params_calc = sh_params.copy()
     sh_params_calc.update({"shield_program": shield_selector_calc.file})
-    from shields.safety_calculator import SafetyCalculator  # Ensure this import is valid.
     safety_calc = SafetyCalculator(sh_params_calc)
     
     # Save configuration.

@@ -1,7 +1,6 @@
 #!/bin/bash
 
 #SBATCH --partition=rome
-#SBATCH --cpus=16
 #SBATCH --job-name=Debug_MultiAgent
 #SBATCH --ntasks=16
 #SBATCH --cpus-per-task=1

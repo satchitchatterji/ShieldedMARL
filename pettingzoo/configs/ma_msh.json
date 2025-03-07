@@ -5,8 +5,8 @@
 
     "env": "markov_stag_hunt",
     "max_cycles": 200,
-    "max_eps": 1,
-    "eval_every": 100,
+    "max_eps": 10,
+    "eval_every": 5,
     "n_eval": 1,
     "seed": -2,
 
@@ -27,7 +27,7 @@
     "entropy_coef": 0.01,
 
     "env_config": {
-        "n_agents": 5,
+        "n_agents": 2,
         "grid_size": [10, 10], 
         "stag_move_prob": 0.0, 
         "rewards": [2, 10, -2],
