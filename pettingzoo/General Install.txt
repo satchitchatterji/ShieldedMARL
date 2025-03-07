@@ -15,4 +15,4 @@ pip install -e .
 
 pip install numpy==1.23.5
 pip install pettingzoo
-pip install pandas matplotlib tqdm wandb torch pandas
+pip install pandas matplotlib tqdm wandb torch pandas seaborn
