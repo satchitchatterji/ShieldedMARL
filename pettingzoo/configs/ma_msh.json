@@ -1,6 +1,6 @@
 {
-    "use_wandb": false,
-    "wandb_project_prefix": "ma_msh",
+    "use_wandb": true,
+    "wandb_project_prefix": "snellius_base_debug",
     "device": "cpu",
 
     "env": "markov_stag_hunt",
@@ -8,7 +8,7 @@
     "max_eps": 1,
     "eval_every": 100,
     "n_eval": 1,
-    "seed": 16,
+    "seed": -2,
 
     "shield_alpha": 1.0,
     "shield_version": 7,
@@ -16,10 +16,10 @@
     "shielded_ratio": 1,
     "shield_diff": true,
 
-    "algo": "SIPPO",
-    "update_timestep": 256,
-    "train_epochs": 10,
+    "algo": "IPPO",
     "gamma": 0.99,
+    "update_timestep": 50,
+    "train_epochs": 10,
     "eps_clip": 0.1,
     "lr_actor": 0.001,
     "lr_critic": 0.001,
@@ -30,8 +30,8 @@
         "n_agents": 5,
         "grid_size": [10, 10], 
         "stag_move_prob": 0.0, 
-        "rewards": [2, 10, -2], 
-        "n_plants": 2, 
+        "rewards": [2, 10, -2],
+        "n_plants": 2,
         "n_stags": 1,
         "render_mode": "none"
     }
