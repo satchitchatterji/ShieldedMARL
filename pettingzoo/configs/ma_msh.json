@@ -5,8 +5,8 @@
 
     "env": "markov_stag_hunt",
     "max_cycles": 200,
-    "max_eps": 10,
-    "eval_every": 5,
+    "max_eps": 500,
+    "eval_every": 50,
     "n_eval": 1,
     "seed": -2,
 

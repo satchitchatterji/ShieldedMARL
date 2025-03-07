@@ -2,9 +2,9 @@
 
 #SBATCH --partition=rome
 #SBATCH --job-name=Debug_MultiAgent
-#SBATCH --ntasks=16
+#SBATCH --ntasks=128
 #SBATCH --cpus-per-task=1
-#SBATCH --time=10:00:00
+#SBATCH --time=01:00:00
 #SBATCH --output=/home/schatterji1/Debug_MultiAgent/slurm_output_%A.out
 
 module purge
@@ -13,7 +13,7 @@ module load Anaconda3/2023.07-2
 
 source activate pls
 
-cd $HOME/schatterji1/ShieldedMARLThesis/pettingzoo
-srun -n 16 wandb agent --count 1 satchat/snellius_base_debug_posix_markov_stag_hunt/q2fp9g7m
+cd $HOME/ShieldedMARL/pettingzoo
 
-# srun --partition=rome --ntasks=1 --cpus-per-task=1 --time=10:00:00 wandb agent --count 1 satchat/snellius_base_debug_posix_markov_stag_hunt/q2fp9g7m
+srun -n 128 wandb agent --count 1 satchat/snellius_base_debug_posix_markov_stag_hunt/q2fp9g7m
+

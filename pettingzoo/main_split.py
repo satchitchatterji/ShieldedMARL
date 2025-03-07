@@ -183,7 +183,7 @@ def train_loop(setup_vars):
             ep += 1
     
     except KeyboardInterrupt:
-        print("Training interrupted, saving model.")
+        print("[WARNING] Training interrupted, saving model.")
         algo.save(f"models/{env_name}/{config.algo}_{cur_time}/ep{ep}")
     
     env.close()
@@ -210,7 +210,7 @@ def save_data(setup_vars, train_stats):
         os.makedirs(dir_path, exist_ok=True)
         with open(f"{dir_path}/{cur_time}{suffix}", "wb") as f:
             pk.dump(data, f)
-    print("Data saved.")
+    print("[INFO] Data saved.")
 
 def plot_results(setup_vars, train_stats):
     env_name = setup_vars["env_name"]
@@ -236,7 +236,7 @@ def plot_results(setup_vars, train_stats):
     os.makedirs(plot_dir, exist_ok=True)
     plt.savefig(f"{plot_dir}/{cur_time}_train_mean.png")
     plt.clf()
-    print("Plots saved.")
+    print("[INFO] Plots saved.")
 
 def offline_evaluation(setup_vars):
     env_creator_func = ALL_ENVS[config.env]
@@ -313,7 +313,9 @@ def main():
     # Optionally, run offline evaluation.
     # offline_evaluation(setup_vars)
     
-    print("Training complete.")
+    print("Training complete. Fileref:", setup_vars["cur_time"])
+    print("Runtime:", datetime.datetime.now() - datetime.datetime.strptime(setup_vars["cur_time"], "%Y-%m-%d_%H%M%S"))
+
 
 if __name__ == "__main__":
     main()
