@@ -73,8 +73,8 @@ parser.add_argument("--n_eval",
 
 parser.add_argument("--seed",
                     type=int,
-                    default=-1,
-                    help="Seed for reproducibility (-1 for auto)."
+                    default=-2,
+                    help="Seed for reproducibility (-1 for auto, -2 for random)."
                     )
 
 parser.add_argument("--shield_alpha",
