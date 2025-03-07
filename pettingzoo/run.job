@@ -13,5 +13,7 @@ module load Anaconda3/2023.07-2
 
 source activate pls
 
-cd /home/schatterji1/ShieldedMARLThesis/pettingzoo
-srun -n 16 wandb agent --count 1 satchat/snellius_base_debug_posix_markov_stag_hunt/8078anxd
+cd $HOME/schatterji1/ShieldedMARLThesis/pettingzoo
+srun -n 16 wandb agent --count 1 satchat/snellius_base_debug_posix_markov_stag_hunt/q2fp9g7m
+
+# srun --partition=rome --ntasks=1 --cpus-per-task=1 --time=10:00:00 wandb agent --count 1 satchat/snellius_base_debug_posix_markov_stag_hunt/q2fp9g7m

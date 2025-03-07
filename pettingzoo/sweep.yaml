@@ -1,9 +1,4 @@
-program: "main_split.py"
-command:
-  - ${env}
-  - python
-  - ${program}
-  - "--config=configs/ma_msh.json"
+command: ["python", "main_split.py", "--config=configs/ma_msh.json"]
 method: bayes
 metric:
   name: eval_mean_reward
