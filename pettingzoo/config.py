@@ -16,6 +16,12 @@ parser.add_argument("--use_wandb",
                     help="Use wandb for logging."
                     )
 
+parser.add_argument("--wandb_project_prefix",
+                    type=str,
+                    default="",
+                    help="Prefix for wandb project name."
+                    )
+
 parser.add_argument("--device",
                     type=str,
                     default="cpu",
@@ -33,6 +39,12 @@ parser.add_argument("--env",
                     type=str,
                     default="simple_pd_v0",
                     help=f"Environment to use. Options are {ALL_ENVS.keys()}"
+                    )
+
+parser.add_argument("--env_config",
+                    type=dict,
+                    default={},
+                    help="Config for the environment. See env_selection.py for examples."
                     )
 
 parser.add_argument("--max_cycles",
@@ -61,8 +73,8 @@ parser.add_argument("--n_eval",
 
 parser.add_argument("--seed",
                     type=int,
-                    default=-1,
-                    help="Seed for reproducibility (-1 for auto)."
+                    default=-2,
+                    help="Seed for reproducibility (-1 for auto, -2 for random)."
                     )
 
 parser.add_argument("--shield_alpha",

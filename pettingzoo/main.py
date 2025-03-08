@@ -26,6 +26,7 @@ torch.manual_seed(config.seed)
 device = torch.device(config.device)
 
 system = os.name
+wandb_project_prefix = config.wandb_project_prefix
 
 # cur_time = time.time()
 now = datetime.datetime.now()
@@ -42,8 +43,9 @@ print(f"[INFO] Training for {max_training_episodes} episodes of {max_cycles} cyc
 
 env_creator_func = ALL_ENVS[config.env]
 env_creator_args = ALL_ENVS_ARGS[config.env]
+env_creator_args.update(config.env_config)
 env_creator_args.update({"max_cycles": max_cycles})
-env = env_creator_func(render_mode=None, **env_creator_args)
+env = env_creator_func(**env_creator_args)
 env.reset()
 
 env_name = env.metadata["name"]
@@ -87,6 +89,8 @@ alpha = config.shield_alpha
 
 
 ############################################ ALGO SELECTION ############################################
+
+print(f"[INFO] Using algorithm: {config.algo}, with n_agents: {env.n_agents}")
 
 algo_name = config.algo
 
@@ -144,7 +148,7 @@ eval_hists = []
 eval_safeties = []
 eval_episodes = []
 mode = "online" if config.use_wandb else "disabled"
-wandb.init(project=f"{system}_{env_name}", name=f"{algo_name}_{cur_time}", config=config_dict, mode=mode)
+wandb.init(project=f"{wandb_project_prefix}_{system}_{env_name}", name=f"{algo_name}_{cur_time}", config=config_dict, mode=mode)
 
 ep=0
 try:

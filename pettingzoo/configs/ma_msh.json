@@ -1,36 +1,39 @@
 {
-    "use_wandb": false,
+    "use_wandb": true,
+    "wandb_project_prefix": "snellius_base_debug",
     "device": "cpu",
-    "algo": "SIPPO",
+
     "env": "markov_stag_hunt",
-    "max_cycles": 20,
-    "max_eps": 10,
-    "eval_every": 10,
+    "max_cycles": 200,
+    "max_eps": 500,
+    "eval_every": 50,
     "n_eval": 1,
-    "seed": -1,
+    "seed": -2,
+
     "shield_alpha": 1.0,
-    "shield_file": "default",
     "shield_version": 7,
     "shield_eval_version": 7,
-    "shielded_ratio": 0.3,
+    "shielded_ratio": 1,
     "shield_diff": true,
-    "shield_eps": 0.1,
+
+    "algo": "IPPO",
+    "gamma": 0.99,
     "update_timestep": 50,
     "train_epochs": 10,
-    "gamma": 0.99,
     "eps_clip": 0.1,
     "lr_actor": 0.001,
     "lr_critic": 0.001,
     "vf_coef": 0.3,
-    "entropy_coef": 0.03,
-    "buffer_size": 1000,
-    "batch_size": 64,
-    "lr": 0.001,
-    "tau": 0.01,
-    "target_update_type": "none",
-    "eps_min": 0.05,
-    "eps_decay": 0.995,
-    "explore_policy": "e_greedy",
-    "eval_policy": "greedy",
-    "on_policy": false
+    "entropy_coef": 0.01,
+
+    "env_config": {
+        "n_agents": 2,
+        "grid_size": [10, 10], 
+        "stag_move_prob": 0.0, 
+        "rewards": [2, 10, -2],
+        "n_plants": 2,
+        "n_stags": 1,
+        "render_mode": "none"
+    }
+
 }
