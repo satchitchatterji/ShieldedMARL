@@ -1,11 +1,11 @@
 #!/bin/bash
 
-#SBATCH --partition=genoa
+#SBATCH --partition=rome
 #SBATCH --job-name=Debug_MultiAgent
-#SBATCH --ntasks=150
-#SBATCH --cpus-per-task=1
+#SBATCH --ntasks=5
+#SBATCH --cpus-per-task=2
 #SBATCH --time=01:00:00
-#SBATCH --output=/home/schatterji1/MAMSH/slurm_output_%A.out
+#SBATCH --output=/home/schatterji1/Debug_MultiAgent/slurm_output_%A.out
 
 module purge
 module load 2023
@@ -15,6 +15,7 @@ source activate pls
 
 cd $HOME/ShieldedMARL/pettingzoo
 
-srun -n 150 wandb agent --count 1 satchat/snellius_mamsh/7atopxsy
+# srun -n 150 wandb agent --count 1 satchat/snellius_mamsh/7atopxsy
+srun -n 5 python main.py --config=configs/ma_msh.json
 
 
