@@ -44,7 +44,7 @@ def run_episode(env, algo, max_cycles, ep=0):
     update_dict.update({f"total_reward_{agent}": np.sum(reward_hist[agent]) for agent in reward_hist})
     # total reward overall
     update_dict.update({"total_reward_mean": np.mean([np.sum(reward_hist[agent]) for agent in reward_hist])})
-    wandb.log(update_dict)
+    # wandb.log(update_dict) # NOTE: wandb rate limit exceeded for sweep
     return reward_hist
 
 

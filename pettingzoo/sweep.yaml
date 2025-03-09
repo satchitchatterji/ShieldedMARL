@@ -5,7 +5,7 @@ metric:
  goal: maximize
 parameters:
  algo:
-   values: [“IPPO”, “SIPPO”, “MAPPO”, “SMAPPO”, “ACSPPO”, “SACSPPO”]
+   values: [IPPO, SIPPO, MAPPO, SMAPPO, ACSPPO, SACSPPO]
  seed:
    values: [100, 101, 102, 103, 104]
  shielded_ratio:
