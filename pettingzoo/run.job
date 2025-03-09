@@ -15,5 +15,6 @@ source activate pls
 
 cd $HOME/ShieldedMARL/pettingzoo
 
-srun -n 150 wandb agent --count 1 satchat/snellius_mamsh/6cterbdw
+srun -n 150 wandb agent --count 1 satchat/snellius_mamsh/7atopxsy
+
 
