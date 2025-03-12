@@ -1,0 +1,38 @@
+{
+    "use_wandb": true,
+    "wandb_project_prefix": "snellius_mamsh",
+    "device": "cpu",
+ 
+    "env": "markov_stag_hunt",
+    "max_cycles": 200,
+    "max_eps": 1000,
+    "eval_every": 10,
+    "n_eval": 1,
+    "seed": -2,
+    "shield_alpha": 1.0,
+    "shield_version": 7,
+    "shield_eval_version": 7,
+    "shielded_ratio": 1,
+    "shield_diff": true,
+ 
+    "algo": "SACSPPO",
+    "gamma": 0.99,
+    "update_timestep": 50,
+    "train_epochs": 10,
+    "eps_clip": 0.1,
+    "lr_actor": 0.005,
+    "lr_critic": 0.005,
+    "vf_coef": 0.5,
+    "entropy_coef": 0.01,
+ 
+    "env_config": {
+        "n_agents": 2,
+        "grid_size": [5, 5],
+        "stag_move_prob": 0.0,
+        "rewards": [2, 10, -2],
+        "n_plants": 2,
+        "n_stags": 1,
+        "render_mode": "none"
+    }
+ }
+ 
