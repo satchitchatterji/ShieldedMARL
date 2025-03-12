@@ -230,40 +230,35 @@ class PPOShielded:
         self.time_step = 0
         self.eval_mode = False
 
-    def set_policy(self, policy):
-        del self.policy
-        del self.policy_old
+    def update_optimizer(self):
+        # Delete the existing optimizer.
         del self.optimizer
-
-        self.policy = policy.to(self.device)
+        # Recreate the optimizer with both actor and critic parameters.
         self.optimizer = torch.optim.Adam([
-                {'params': self.policy.actor.parameters(), 'lr': self.lr_actor},
-                {'params': self.policy.critic.parameters(), 'lr': self.lr_critic}
-            ])
-        self.policy_old = ActorCriticShielded(self.state_dim, self.action_dim, **self.policy_kw_args).to(self.device)
-        self.policy_old.load_state_dict(self.policy.state_dict()).to(self.device)
+            {'params': self.policy.actor.parameters(), 'lr': self.lr_actor},
+            {'params': self.policy.critic.parameters(), 'lr': self.lr_critic}
+        ])
+        # Create a clone of the policy.
+        self.policy_old = ActorCriticShielded(
+            self.state_dim, self.action_dim, **self.policy_kw_args
+        ).to(self.device)
+        self.policy_old.load_state_dict(self.policy.state_dict())
+
+    def set_policy(self, policy):
+        # Set both actor and critic at once.
+        self.policy.actor = policy.actor.to(self.device)
+        self.policy.critic = policy.critic.to(self.device)
+        self.update_optimizer()
 
     def set_policy_critic(self, critic):
-        del self.optimizer
-
+        # Update only the critic.
         self.policy.critic = critic.to(self.device)
-        self.optimizer = torch.optim.Adam([
-                {'params': self.policy.actor.parameters(), 'lr': self.lr_actor},
-                {'params': self.policy.critic.parameters(), 'lr': self.lr_critic}
-            ])
-        self.policy_old = ActorCriticShielded(self.state_dim, self.action_dim, **self.policy_kw_args).to(self.device)
-        self.policy_old.load_state_dict(self.policy.state_dict())
+        self.update_optimizer()
 
     def set_policy_actor(self, actor):
-        del self.optimizer
-
+        # Update only the actor.
         self.policy.actor = actor.to(self.device)
-        self.optimizer = torch.optim.Adam([
-                {'params': self.policy.actor.parameters(), 'lr': self.lr_actor},
-                {'params': self.policy.critic.parameters(), 'lr': self.lr_critic}
-            ])
-        self.policy_old = ActorCriticShielded(self.state_dim, self.action_dim, **self.policy_kw_args).to(self.device)
-        self.policy_old.load_state_dict(self.policy.state_dict())
+        self.update_optimizer()
 
     def select_action(self, state):
         with torch.no_grad():

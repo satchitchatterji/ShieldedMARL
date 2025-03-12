@@ -24,26 +24,22 @@ class SACSPPO(BaseMARLAlgo):
                                     policy_safety_params=self.sh_params,
                                     policy_kw_args={"shield_params":self.sh_params, "get_sensor_value_ground_truth":self.sensor_wrapper},
                                     **self.algorithm_params)
-            self.agents[agent].set_policy_critic(self.agents[self.env.agents[0]].policy.critic)
-            self.agents[agent].set_policy_actor(self.agents[self.env.agents[0]].policy.actor)
-
-        if self.shielded_ratio == 1.0:
-            return
-        
-        critic = self.agents[self.env.agents[0]].policy.critic
-        actor = self.agents[self.env.agents[0]].policy.actor
 
         n_unshielded = np.round((1-self.shielded_ratio) * len(self.env.agents))
-        print(f"\nINFO: Creating {n_unshielded} unshielded agents out of {len(self.env.agents)} total agents.")
-        print(f"\t> Shielded ratio (requested): {n_unshielded/len(self.env.agents)} ({1-self.shielded_ratio})\n")
-        
-        unshielded_agents = np.random.choice(self.env.agents, int(n_unshielded), replace=False)
-        for agent in unshielded_agents:
-            self.agents[agent] = PPOShielded(state_dim=self.observation_space, 
-                                            action_dim=self.n_discrete_actions, 
-                                            policy_kw_args={"get_sensor_value_ground_truth":self.sensor_wrapper},
-                                            policy_safety_params={},
-                                            **self.algorithm_params)
+        n_shielded = len(self.env.agents) - n_unshielded
+        print(f"[SACSPPO INFO]: Creating {n_shielded} shielded ({n_unshielded} unshielded) agents out of {len(self.env.agents)} total agents.")
+        print(f"              Shielded ratio (requested): {self.shielded_ratio} | Shielded ratio (actual): {n_shielded/len(self.env.agents)}")
 
-            self.agents[agent].set_policy_critic(critic)
-            self.agents[agent].set_policy_actor(actor)
+        if self.shielded_ratio != 1.0:
+            unshielded_agents = np.random.choice(self.env.agents, int(n_unshielded), replace=False)
+            for agent in unshielded_agents:
+                self.agents[agent] = PPOShielded(state_dim=self.observation_space, 
+                                                action_dim=self.n_discrete_actions, 
+                                                policy_kw_args={"get_sensor_value_ground_truth":self.sensor_wrapper},
+                                                policy_safety_params={},
+                                                **self.algorithm_params)
+
+        for a, agent in enumerate(self.env.agents):
+            if a != 0:
+                self.agents[agent].set_policy(self.agents[self.env.agents[0]].policy)
+
