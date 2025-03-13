@@ -24,7 +24,7 @@ runfile = f"""#!/bin/bash
 #SBATCH --job-name=Debug_MultiAgent
 #SBATCH --ntasks={len(filenames)*nseeds}
 #SBATCH --cpus-per-task=2
-#SBATCH --time=03:00:00
+#SBATCH --time=06:00:00
 #SBATCH --output=/home/schatterji1/Debug_MultiAgent/slurm_output_%A.out
 
 module purge

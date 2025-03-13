@@ -144,7 +144,7 @@ class parallel_env(ParallelEnv):
         self.grid_history = []
         self.animate = False
         # Folder where animation videos will be saved.
-        self.animation_folder = "/Users/satch/Documents/Personal/ThesisPlayground/grid_envs/animations"
+        self.animation_folder = "/home/schatterji1/ShieldedMARL/grid_envs/animations"
 
         # List of evaluation functions. Currently includes function for making animated movements.
         self.eval_funcs = [
