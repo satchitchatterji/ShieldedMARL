@@ -18,3 +18,5 @@ plots
 !assets/*
 
 *DS_Store
+
+*.json
