@@ -20,3 +20,5 @@ plots
 *DS_Store
 
 *.json
+# all except all files named template.json
+!template.json
