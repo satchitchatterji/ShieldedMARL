@@ -1,0 +1,37 @@
+{
+    "use_wandb": true,
+    "wandb_project_prefix": "snellius_maepgg_attempt2",
+    "device": "cpu",
+ 
+    "env": "publicgoodsmany",
+    "max_cycles": 25,
+    "max_eps": 1000,
+    "eval_every": 10,
+    "n_eval": 1,
+    "seed": -2,
+    "shield_alpha": 1.0,
+    "shield_version": 0,
+    "shield_eval_version": 0,
+    "shield_diff": true,
+
+    "shielded_ratio": 0,
+    "algo": "SIPPO",
+
+    "gamma": 0.9,
+    "update_timestep": 50,
+    "train_epochs": 5,
+    "eps_clip": 0.1,
+    "lr_actor": 0.001,
+    "lr_critic": 0.001,
+    "vf_coef": 0.5,
+    "entropy_coef": 0.01,
+ 
+    "env_config": {
+        "n_agents":5, 
+        "initial_endowment": 2,
+        "observe_f": true, 
+        "f_params": [100, 0.5], 
+        "render_mode": "none"
+    }
+ }
+ 

@@ -1,0 +1,47 @@
+#!/bin/bash
+
+#SBATCH --partition=genoa
+#SBATCH --job-name=EPGG
+#SBATCH --ntasks=150
+#SBATCH --cpus-per-task=1
+#SBATCH --time=01:00:00
+#SBATCH --output=/home/schatterji1/EPGG/slurm_output_%A.out
+
+module purge
+module load 2023
+module load Anaconda3/2023.07-2
+
+source activate pls
+
+cd $HOME/ShieldedMARL/pettingzoo
+
+srun -n 5 python main.py --config=configs/ma_epgg/epgg_1/SMAPPO_00_0.5.json &
+srun -n 5 python main.py --config=configs/ma_epgg/epgg_1/SMAPPO_00_1.json &
+srun -n 5 python main.py --config=configs/ma_epgg/epgg_1/SMAPPO_00_1.5.json &
+srun -n 5 python main.py --config=configs/ma_epgg/epgg_1/SMAPPO_00_2.5.json &
+srun -n 5 python main.py --config=configs/ma_epgg/epgg_1/SMAPPO_00_5.json &
+srun -n 5 python main.py --config=configs/ma_epgg/epgg_1/SMAPPO_02_0.5.json &
+srun -n 5 python main.py --config=configs/ma_epgg/epgg_1/SMAPPO_02_1.json &
+srun -n 5 python main.py --config=configs/ma_epgg/epgg_1/SMAPPO_02_1.5.json &
+srun -n 5 python main.py --config=configs/ma_epgg/epgg_1/SMAPPO_02_2.5.json &
+srun -n 5 python main.py --config=configs/ma_epgg/epgg_1/SMAPPO_02_5.json &
+srun -n 5 python main.py --config=configs/ma_epgg/epgg_1/SMAPPO_04_0.5.json &
+srun -n 5 python main.py --config=configs/ma_epgg/epgg_1/SMAPPO_04_1.json &
+srun -n 5 python main.py --config=configs/ma_epgg/epgg_1/SMAPPO_04_1.5.json &
+srun -n 5 python main.py --config=configs/ma_epgg/epgg_1/SMAPPO_04_2.5.json &
+srun -n 5 python main.py --config=configs/ma_epgg/epgg_1/SMAPPO_04_5.json &
+srun -n 5 python main.py --config=configs/ma_epgg/epgg_1/SMAPPO_06_0.5.json &
+srun -n 5 python main.py --config=configs/ma_epgg/epgg_1/SMAPPO_06_1.json &
+srun -n 5 python main.py --config=configs/ma_epgg/epgg_1/SMAPPO_06_1.5.json &
+srun -n 5 python main.py --config=configs/ma_epgg/epgg_1/SMAPPO_06_2.5.json &
+srun -n 5 python main.py --config=configs/ma_epgg/epgg_1/SMAPPO_06_5.json &
+srun -n 5 python main.py --config=configs/ma_epgg/epgg_1/SMAPPO_08_0.5.json &
+srun -n 5 python main.py --config=configs/ma_epgg/epgg_1/SMAPPO_08_1.json &
+srun -n 5 python main.py --config=configs/ma_epgg/epgg_1/SMAPPO_08_1.5.json &
+srun -n 5 python main.py --config=configs/ma_epgg/epgg_1/SMAPPO_08_2.5.json &
+srun -n 5 python main.py --config=configs/ma_epgg/epgg_1/SMAPPO_08_5.json &
+srun -n 5 python main.py --config=configs/ma_epgg/epgg_1/SMAPPO_10_0.5.json &
+srun -n 5 python main.py --config=configs/ma_epgg/epgg_1/SMAPPO_10_1.json &
+srun -n 5 python main.py --config=configs/ma_epgg/epgg_1/SMAPPO_10_1.5.json &
+srun -n 5 python main.py --config=configs/ma_epgg/epgg_1/SMAPPO_10_2.5.json &
+srun -n 5 python main.py --config=configs/ma_epgg/epgg_1/SMAPPO_10_5.json
