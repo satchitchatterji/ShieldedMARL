@@ -157,8 +157,7 @@ class PublicGoodsManySensorWrapper(Wrapper):
     """
     def __init__(self, env, num_sensors=None, device=None):
         super().__init__(env, num_sensors=num_sensors, device=device)
-        
-        self.num_sensors = 1
+
         if env.observe_f:
             self.translation_func = self.obs_with_f
         else:
@@ -168,17 +167,29 @@ class PublicGoodsManySensorWrapper(Wrapper):
         return torch.tensor(obs, dtype=torch.float32, device=self.device)
     
     def obs_with_f(self, obs):
-        obs = obs.cpu().numpy()
         agent_other = obs[0]
-        # return % of cooperating agents
-        return torch.tensor(agent_other, dtype=torch.float32, device=self.device)
-
+        return torch.tensor(np.array([agent_other]), dtype=torch.float32, device=self.device)
+    
     def __call__(self, x):
-        # TODO: batch processing
+        # If x is a single observation, process it normally.
         if len(x.shape) == 1:
             return self.translation_func(x)
+        
+        # Otherwise, process the batch in a vectorized manner.
+        # For the case without f, simply convert the entire batch.
+        if self.translation_func == self.obs_without_f:
+            return torch.tensor(x, dtype=torch.float32, device=self.device)
+        
+        # For the case with f, we assume each observation is a 1D array
+        # and we need only the first element of each observation.
+        elif self.translation_func == self.obs_with_f:
+            # If x has shape (batch_size, obs_length), we take the first column
+            # and reshape it to (batch_size, 1)
+            result = x[:, 0].unsqueeze(1)
+            return result.to(dtype=torch.float32, device=self.device)
+        
         else:
-            return torch.stack([self.translation_func(x[i]) for i in range(x.shape[0])])
+            raise NotImplementedError("Translation function not supported for vectorization.")
 
 class CartSafeSensorWrapper(Wrapper):
     """

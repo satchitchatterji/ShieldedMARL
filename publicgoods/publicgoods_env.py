@@ -37,13 +37,13 @@ class parallel_env(ParallelEnv):
         self.rand_mult_factor = None
         self._mult_factor = None
 
-        print('Public Goods Game!')
+        # print('Public Goods Game!')
         if self.static_mult_factor is not None and self.f_params is not None:
-            print("Warning: both mult_factor and f_params are set. Using mult_factor.")
+            print("[EPGG] Warning: both mult_factor and f_params are set. Using mult_factor.")
             self.f_params = None
             self._mult_factor = self.static_mult_factor
         elif self.static_mult_factor is None and self.f_params is None:
-            print("Warning: neither mult_factor nor f_params are set! Exiting...")
+            print("[EPGG] Error: neither mult_factor nor f_params are set! Exiting...")
             exit(1)
 
         self.state = {agent: MOVES["NONE"] for agent in self.agents}

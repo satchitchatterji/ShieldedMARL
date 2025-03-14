@@ -107,7 +107,7 @@ def eval_episode(env, algo, max_cycles, ep=0, safety_calculator=None, save_wandb
     if save_wandb:
         wandb.log(update_dict)
     if env.metadata["name"] == "markov_stag_hunt":
-        print("stag_chances", int(stag_chances.item()/2))
+        print("stag_chances", int(stag_chances.item()))
         pp.pprint(update_dict)
 
     algo.eval(False)
