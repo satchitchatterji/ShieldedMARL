@@ -44,6 +44,8 @@ source activate pls
 
 cd $HOME/ShieldedMARL/pettingzoo
 
+wandb offline
+
 """ + \
 " &\n".join([f"srun -n {nseeds} python main.py --config=configs/ma_epgg/epgg_1/{filename}" for filename in filenames])
 

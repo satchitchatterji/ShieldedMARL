@@ -1,6 +1,6 @@
 {
     "use_wandb": true,
-    "wandb_project_prefix": "snellius_maepgg_attempt2",
+    "wandb_project_prefix": "snellius_maepgg_attempt4",
     "device": "cpu",
  
     "env": "publicgoodsmany",

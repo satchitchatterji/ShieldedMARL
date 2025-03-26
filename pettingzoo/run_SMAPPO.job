@@ -15,6 +15,8 @@ source activate pls
 
 cd $HOME/ShieldedMARL/pettingzoo
 
+wandb offline
+
 srun -n 5 python main.py --config=configs/ma_epgg/epgg_1/SMAPPO_00_0.5.json &
 srun -n 5 python main.py --config=configs/ma_epgg/epgg_1/SMAPPO_00_1.json &
 srun -n 5 python main.py --config=configs/ma_epgg/epgg_1/SMAPPO_00_1.5.json &
