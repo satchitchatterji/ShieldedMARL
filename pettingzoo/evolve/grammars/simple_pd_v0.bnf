@@ -1,0 +1,10 @@
+<program>       ::= <clause_list>
+<clause_list>   ::= <clause> | <clause> <clause_list>
+<head>          ::= <safety>
+<clause>        ::= <head> :- <body>.
+<body>          ::= <atom> | <atom>, <body> | <atom> ; <body>
+<atom>          ::= <pred> | \+ <pred> | <safety> | \+ <safety>
+<sensors>       ::= cooperate | defect
+<actions>       ::= cooperate | defect
+<pred>          ::= sensor(<sensors>) | action(<actions>)
+<safety>        ::= unsafe_next | safe_next

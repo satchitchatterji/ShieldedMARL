@@ -66,6 +66,11 @@ class ActorCriticShielded(nn.Module):
             self.shield = shield
         elif shield_params is None and shield is None:
             self.shield = None
+
+    def update_shield_params(self, shield_params):
+        self.shield = Shield(
+            **shield_params,
+        )
         
     def forward(self):
         raise NotImplementedError
@@ -227,6 +232,7 @@ class PPOShielded:
         
         self.alpha = alpha
         self.policy_safety_calculater = Shield(**policy_safety_params)
+        self.shielded_status = "shield_params" in policy_kw_args
         self.time_step = 0
         self.eval_mode = False
 
@@ -286,6 +292,11 @@ class PPOShielded:
             action_probs = self.policy_old.actor(state)
 
         return action_probs
+    
+    def update_shield_params(self, shield_params):
+        self.policy.update_shield_params(shield_params)
+        self.policy_old.update_shield_params(shield_params)
+        self.policy_safety_calculater = Shield(**shield_params)
 
     def update(self):
         # Monte Carlo estimate of returns

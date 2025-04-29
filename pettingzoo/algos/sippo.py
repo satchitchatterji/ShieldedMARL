@@ -39,3 +39,6 @@ class SIPPO(BaseMARLAlgo):
                                              action_dim=self.n_discrete_actions, 
                                              policy_kw_args={"get_sensor_value_ground_truth":self.sensor_wrapper},
                                             **self.algorithm_params)
+        # for agent in self.agents:
+        #     print(self.agents[agent].shielded_status)
+        # exit()

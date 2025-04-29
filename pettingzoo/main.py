@@ -18,6 +18,7 @@ from run_episode import run_episode, eval_episode
 from config import config
 from util import get_new_seed
 
+from shield_evolver import ShieldEvolver
 
 config.seed = get_new_seed(config)
 np.random.seed(config.seed)
@@ -143,17 +144,55 @@ reward_hists = []
 eval_hists = []
 eval_safeties = []
 eval_episodes = []
+scores_safety = {}
+scores_reward = {}
+ep=0
 mode = "online" if config.use_wandb else "disabled"
 wandb.init(project=f"{system}_{env_name}", name=f"{algo_name}_{cur_time}", config=config_dict, mode=mode)
 
-ep=0
-try:
-    for _ in range(max_training_episodes):
-        reward_hist = run_episode(env, algo, max_cycles, ep)
-        reward_hists.append(reward_hist)
+shielded_agents = []
+def update_shield(evolver, shield_file, agent):
+    if not agent.shielded_status:
+        return
+    # exit()
+    sh_params["config_folder"] = evolver.base_dir
+    sh_params["shield_program"] = shield_file
+    agent.update_shield_params(sh_params)
 
-        if ep % config.eval_every == 0 or ep == max_training_episodes-1:
-            eval_episodes.append(ep)
+def single_gen(evolver, env, algo, max_cycles, safety_calc, ind=None):
+    global scores_safety, reward_hists, eval_hists, eval_safeties, eval_episodes, ep, scores_reward
+    if ind is not None:
+        evolver.save_single_ind(ind, "temp")
+        population = [ind]
+    else:
+        population = evolver.population
+
+    ep_start = ep
+    ep += config.eval_every
+
+    for ind in population:
+        file = evolver.shield_files[ind]
+        try:
+            for a_idx, agent in enumerate(algo.agents.values()):
+                update_shield(evolver, file, agent)
+                shielded_agents.append(a_idx)
+        except Exception as e:
+            with open("error_log.txt", "a") as f:
+                f.write(str(e))
+            if "problog.engine.UnknownClause" or "No clauses found for" in str(e):
+                scores_safety[ind] = -np.inf
+                scores_reward[ind] = -np.inf
+            else:
+                print(f"Error: {e}")
+                scores_safety[ind] = -np.inf
+                scores_reward[ind] = -np.inf
+            
+        try:
+            for _ in range(config.eval_every):
+                reward_hist = run_episode(env, algo, max_cycles, ep_start)
+                reward_hists.append(reward_hist)
+                
+            eval_episodes.append(ep_start)
             eval_reward_hists = []
             eval_safety_hists = []
             for _ in range(n_eval):
@@ -162,18 +201,61 @@ try:
                 eval_safety_hists.append(eval_safety_hist)
             eval_hists.append(eval_reward_hists)
             eval_safeties.append(eval_safety_hists)
+        
             if "eval_funcs" in dir(env):
                 for eval_func in env.eval_funcs:
-                    eval_func(env=env, algo=algo, ep=ep, experiment_name=f"{algo_name}_{cur_time}")
+                    eval_func(env=env, algo=algo, ep=ep_start, experiment_name=f"{algo_name}_{cur_time}")
 
-            algo.save(f"models/{env_name}/{algo_name}_{cur_time}/ep{ep}")
+            scores_safety[ind] = np.mean([np.mean(eval_safety_hist[agent]) for agent in eval_safety_hist])
+            scores_reward[ind] = np.mean([np.mean(eval_reward_hist[agent]) for a_idx, agent in enumerate(eval_reward_hist) if a_idx in shielded_agents])
+            # algo.save(f"models/{env_name}/{algo_name}_{cur_time}/ep{ep_start}")
 
-        ep+=1
 
-except KeyboardInterrupt:
-    print("Training interrupted, saving model.")
-    algo.save(f"models/{env_name}/{algo_name}_{cur_time}/ep{ep}")
+        except Exception as e:
+            with open("error_log.txt", "a") as f:
+                f.write(str(e))
+            if "problog.engine.UnknownClause" or "No clauses found for" in str(e):
+                scores_safety[ind] = -np.inf
+                scores_reward[ind] = -np.inf
+            else:
+                print(f"Error: {e}")
+                scores_safety[ind] = -np.inf
+                scores_reward[ind] = -np.inf
 
+def complexity(ind):
+    # proportional to number of clauses and rules
+    return ind.phenotype.count(",") + ind.phenotype.count(";") + 1
+
+def get_score(ind):
+    global scores_safety, scores_reward
+    if ind not in scores_safety:
+        single_gen(evolver, env, algo, max_cycles, safety_calc, ind)
+    
+    return 10*scores_reward[ind]/(complexity(ind)) * \
+            (ind.phenotype.count("action")>0) * \
+            (ind.phenotype.strip().startswith("unsafe_next")),
+
+from evolve.evolve_util import get_sensors, get_actions, get_grammar
+grammar = get_grammar(env_name)
+evolver = ShieldEvolver(grammar_file=grammar,
+                        env_name=env_name,
+                        sensor_names=get_sensors(env_name),
+                        action_names=get_actions(env_name),
+                        fitness_fn=get_score,
+                        pop_size=20)
+
+from tqdm import trange
+best_scores = []
+
+n_generations = max_training_episodes // config.eval_every
+for gen in trange(n_generations):
+    single_gen(evolver, env, algo, max_cycles, safety_calc)
+    print(scores_safety.values())
+    print(scores_reward.values())
+    evolver.evolve_single_gen()
+    best_scores.append(evolver.best_fitness)
+
+print(best_scores)
 wandb.finish()
 env.close()
 

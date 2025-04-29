@@ -1,0 +1,9 @@
+<program>       ::= <clause_list>
+<clause_list>   ::= <clause> | <clause> <clause_list>
+<clause>        ::= <fact_clause> | <rule_clause>
+<fact_clause>   ::= <prob>::<atom>. | <atom>.
+<rule_clause>   ::= <atom> :- <body>.
+<body>          ::= <atom> | <atom>, <body> | <atom> ; <body>
+<prob>          ::= 0.1 | 0.2 | 0.3 | 0.4 | 0.5
+<atom>          ::= <pred> | \+ <pred>
+<pred>          ::= rain | sprinkler | wetgrass | cloudy | sunny

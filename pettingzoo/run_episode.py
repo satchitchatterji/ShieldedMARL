@@ -14,7 +14,7 @@ def run_episode(env, algo, max_cycles, ep=0):
     reward_hist = {}
     observations, infos = env.reset()
 
-    for step in trange(max_cycles, desc=f"Episode {ep}"):
+    for step in range(max_cycles):
 
         if len(env.agents) == 0:
             break
