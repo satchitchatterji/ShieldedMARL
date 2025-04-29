@@ -6,6 +6,7 @@ conda activate pls
 git clone git@github.com:satchitchatterji/ShieldedMARLThesis.git
 git clone git@github.com:satchitchatterji/pls.git
 git clone git@github.com:satchitchatterji/gym-safety.git
+git clone git@github.com:Caephas/grape.git
 
 cd pls
 pip install -e .
@@ -13,6 +14,8 @@ pip install -e .
 cd ../gym-safety
 pip install -e .
 
+cd ../grape
+pip install -e .
+
 pip install numpy==1.23.5
-pip install pettingzoo
-pip install pandas matplotlib tqdm wandb torch pandas
+pip install pettingzoo pandas matplotlib tqdm wandb torch pandas
